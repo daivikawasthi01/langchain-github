@@ -61,13 +61,13 @@ print(chain.invoke("how are environment variables read for options?"))
 
 ## Key options
 
-| Option | Effect |
-|---|---|
-| `ref=` | Branch, tag or commit (repo retriever). |
-| `embeddings=` | Any LangChain `Embeddings`; turns on hybrid ranking. Recommended for natural-language questions. |
-| `cache_dir=` | Cache downloads by blob SHA so a new commit refetches only changed files. |
-| `include` / `exclude` / `extensions` | Filter files with gitignore-style globs. |
-| `mode=` | Issues retriever: `index`, `search` or `auto` (default). |
+| Option | Effect | Example | What the example does |
+|---|---|---|---|
+| `ref=` | Branch, tag or commit (repo retriever). | `GitHubRepoRetriever(repo="pallets/click", ref="8.1.7")` | Searches the code as it was at release 8.1.7, not the latest version. Links point to that exact commit. |
+| `embeddings=` | Any LangChain `Embeddings`; turns on hybrid ranking. Recommended for natural-language questions. | `GitHubRepoRetriever(repo="pallets/click", embeddings=my_embeddings)` | Matches on meaning as well as words, so "env vars" also finds text about "environment variables". |
+| `cache_dir=` | Cache downloads so a new commit refetches only changed files. | `GitHubRepoRetriever(repo="pallets/click", cache_dir=".cache/gh")` | Saves downloaded files in `.cache/gh`. The next run reuses them and only fetches what changed. |
+| `include` / `exclude` / `extensions` | Filter files with gitignore-style globs. | `GitHubRepoRetriever(repo="pallets/click", include=["docs/**"], extensions=[".md"])` | Only searches Markdown files under `docs/`, so code and tests never show up in results. |
+| `mode=` | Issues retriever: `index`, `search` or `auto` (default). | `GitHubIssuesRetriever(repo="pallets/click", mode="search")` | Asks GitHub's own search for candidate issues instead of downloading them all. Faster to start on big repos. |
 
 Requests are throttled to GitHub's documented limits, honour `Retry-After`, and raise `GitHubRateLimitError` rather than hang.
 
