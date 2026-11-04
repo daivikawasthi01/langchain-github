@@ -66,11 +66,11 @@ Requests are throttled to GitHub's documented limits, honour `Retry-After`, and 
 
 ## How well does it work?
 
-- **Repo retriever:** clearly better than plain BM25 over the same chunks (hit@5 0.85 vs 0.80, MRR 0.73 vs 0.56 on 20 held-out questions). It ties a good dense-vector baseline; the value is the loader, permalinks and incremental sync.
-- **Issues retriever:** about even with GitHub's own hybrid search on a small synthetic repo. On six large real repos, 0.34 hit@5 for duplicate-finding versus 0.24 for GitHub's hybrid search (41 questions).
-- **Keyword mode** matches words, not meaning. Pass `embeddings=` if your questions are paraphrases.
+- **Repos:** finds the right passages noticeably better than plain keyword search, and about as well as a standard vector store, while also giving you exact line links, any branch or tag, and quick updates when the repo changes.
+- **Issues:** about as good as GitHub's own search at finding the right issue, and it adds what search does not: discussions, the closing pull request, and whether the problem was fixed, answered or closed as a duplicate.
+- **Wording matters:** by default it matches words, so it works best when your question uses the project's own terms. For casual or paraphrased questions, pass `embeddings=` so it also matches meaning.
 
-Samples are small. Full tables, method and caveats: [docs/EVALUATION.md](https://github.com/daivikawasthi01/langchain-github/blob/main/docs/EVALUATION.md).
+Results come from small tests, so treat them as a guide. Details and method: [docs/EVALUATION.md](https://github.com/daivikawasthi01/langchain-github/blob/main/docs/EVALUATION.md).
 
 ## Limits
 
