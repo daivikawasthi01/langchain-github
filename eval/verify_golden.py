@@ -6,7 +6,9 @@ import sys
 
 from langchain_github.loaders import GitHubRepositoryLoader
 
-rows = [json.loads(line) for line in open(sys.argv[1] if len(sys.argv) > 1 else "eval/golden.jsonl")]
+rows = [
+    json.loads(line) for line in open(sys.argv[1] if len(sys.argv) > 1 else "eval/golden.jsonl")
+]
 loaders = {}
 bad = 0
 for row in rows:

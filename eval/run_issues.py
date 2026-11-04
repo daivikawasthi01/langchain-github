@@ -121,10 +121,14 @@ def main() -> None:
     report["resolution_accuracy"] = acc
 
     misses = {
-        name: [r["id"] for r in issue_rows if not any(
-            k in {("issue", n) for n in r["expected"]}
-            for k in distinct(res.get(r["id"], []))[:K]
-        )]
+        name: [
+            r["id"]
+            for r in issue_rows
+            if not any(
+                k in {("issue", n) for n in r["expected"]}
+                for k in distinct(res.get(r["id"], []))[:K]
+            )
+        ]
         for name, res in systems.items()
     }
     report["misses"] = misses
@@ -136,7 +140,9 @@ def main() -> None:
         s = report[name]["issues"]
         print(f"{name:28} {s['n']:>3} {s['hit@1']:>6.2f} {s['hit@5']:>6.2f} {s['mrr']:>6.2f}")
     a = report["ours_index"]["all"]
-    print(f"{'ours_index (+discussions)':28} {a['n']:>3} {a['hit@1']:>6.2f} {a['hit@5']:>6.2f} {a['mrr']:>6.2f}")
+    print(
+        f"{'ours_index (+discussions)':28} {a['n']:>3} {a['hit@1']:>6.2f} {a['hit@5']:>6.2f} {a['mrr']:>6.2f}"
+    )
     print("resolution accuracy:", json.dumps(acc))
     print("misses:", json.dumps({k: v for k, v in misses.items() if k.startswith("ours")}))
 

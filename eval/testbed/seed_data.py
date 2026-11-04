@@ -17,7 +17,9 @@ ISSUES: dict[str, dict] = {
         title="Connection pool exhausted under load",
         body="With 64 worker threads sharing one client, calls start blocking forever. "
         "`pool_maxsize` defaults to 10 and there is no way to bound the wait.",
-        comments=["Reproduced. The pool hands out connections but never times out waiting for one."],
+        comments=[
+            "Reproduced. The pool hands out connections but never times out waiting for one."
+        ],
         resolution="fixed",
         file="acme_http/pool.py",
         fix="Raise default pool size and add `pool_timeout` so waiters fail fast",
@@ -195,14 +197,54 @@ ISSUES: dict[str, dict] = {
 
 # (duplicate_key, canonical_key, title, body)
 DUPLICATES: list[tuple[str, str, str, str]] = [
-    ("dup_pool", "pool", "Client freezes with many threads", "Heavy multithreaded use eventually blocks all calls."),
-    ("dup_stream_timeout", "stream_timeout", "Timeout not applied to large files", "Setting timeout has no effect on a 2 GB download."),
-    ("dup_cert", "corp_cert", "SSL: unable to get local issuer certificate", "Fails at work, fine on mobile hotspot."),
-    ("dup_memory", "json_memory", "OOM killed when reading big API response", "Container with 4 GB gets OOM-killed on a 600 MB payload."),
-    ("dup_cancel", "async_cancel", "Too many open files after asyncio timeouts", "Running wait_for in a loop exhausts file descriptors."),
-    ("dup_retry_after", "retry_after", "Rate limiting: client ignores server's wait hint", "429s keep coming because backoff is too short."),
-    ("dup_basic", "basic_auth", "401 with passwords containing special characters", "Same credentials work in curl."),
-    ("dup_win", "win_timeout", "Windows: timeouts are in the wrong unit", "Timeouts take thousands of seconds."),
+    (
+        "dup_pool",
+        "pool",
+        "Client freezes with many threads",
+        "Heavy multithreaded use eventually blocks all calls.",
+    ),
+    (
+        "dup_stream_timeout",
+        "stream_timeout",
+        "Timeout not applied to large files",
+        "Setting timeout has no effect on a 2 GB download.",
+    ),
+    (
+        "dup_cert",
+        "corp_cert",
+        "SSL: unable to get local issuer certificate",
+        "Fails at work, fine on mobile hotspot.",
+    ),
+    (
+        "dup_memory",
+        "json_memory",
+        "OOM killed when reading big API response",
+        "Container with 4 GB gets OOM-killed on a 600 MB payload.",
+    ),
+    (
+        "dup_cancel",
+        "async_cancel",
+        "Too many open files after asyncio timeouts",
+        "Running wait_for in a loop exhausts file descriptors.",
+    ),
+    (
+        "dup_retry_after",
+        "retry_after",
+        "Rate limiting: client ignores server's wait hint",
+        "429s keep coming because backoff is too short.",
+    ),
+    (
+        "dup_basic",
+        "basic_auth",
+        "401 with passwords containing special characters",
+        "Same credentials work in curl.",
+    ),
+    (
+        "dup_win",
+        "win_timeout",
+        "Windows: timeouts are in the wrong unit",
+        "Timeouts take thousands of seconds.",
+    ),
 ]
 
 # Q&A discussions with an accepted answer: key -> (title, body, answer, query)

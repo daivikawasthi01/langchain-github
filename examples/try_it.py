@@ -1,6 +1,7 @@
 """Print what the retriever returns for a question.
 
-GITHUB_TOKEN=$(gh auth token) python examples/try_it.py pallets/click "how do options read env vars?"
+GITHUB_TOKEN=$(gh auth token) \
+    python examples/try_it.py pallets/click "how do options read env vars?"
 """
 
 import sys

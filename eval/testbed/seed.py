@@ -94,22 +94,40 @@ def seed(gh: GH, m: dict) -> None:
     for key, issue in data.ISSUES.items():
         if key in issues:
             continue
-        number = gh.api("POST", "/repos/{repo}/issues", {"title": issue["title"], "body": issue["body"]})["number"]
+        number = gh.api(
+            "POST", "/repos/{repo}/issues", {"title": issue["title"], "body": issue["body"]}
+        )["number"]
         issues[key] = number
         for text in issue["comments"]:
             gh.api("POST", f"/repos/{{repo}}/issues/{number}/comments", {"body": text})
         if issue["resolution"] == "wontfix":
-            gh.api("PATCH", f"/repos/{{repo}}/issues/{number}", {"state": "closed", "state_reason": "not_planned"})
+            gh.api(
+                "PATCH",
+                f"/repos/{{repo}}/issues/{number}",
+                {"state": "closed", "state_reason": "not_planned"},
+            )
         elif issue["resolution"] == "answered":
-            gh.api("PATCH", f"/repos/{{repo}}/issues/{number}", {"state": "closed", "state_reason": "completed"})
+            gh.api(
+                "PATCH",
+                f"/repos/{{repo}}/issues/{number}",
+                {"state": "closed", "state_reason": "completed"},
+            )
         save(m, gh)
     for dup, canon, title, body in data.DUPLICATES:
         if dup in issues:
             continue
         number = gh.api("POST", "/repos/{repo}/issues", {"title": title, "body": body})["number"]
         issues[dup] = number
-        gh.api("POST", f"/repos/{{repo}}/issues/{number}/comments", {"body": f"Duplicate of #{issues[canon]}."})
-        gh.api("PATCH", f"/repos/{{repo}}/issues/{number}", {"state": "closed", "state_reason": "duplicate"})
+        gh.api(
+            "POST",
+            f"/repos/{{repo}}/issues/{number}/comments",
+            {"body": f"Duplicate of #{issues[canon]}."},
+        )
+        gh.api(
+            "PATCH",
+            f"/repos/{{repo}}/issues/{number}",
+            {"state": "closed", "state_reason": "duplicate"},
+        )
         save(m, gh)
     # 3. fix PRs: branch -> edit marker line -> PR "Fixes #N" -> squash merge
     prs = m.setdefault("prs", {})
@@ -123,24 +141,41 @@ def seed(gh: GH, m: dict) -> None:
         cur = gh.api("GET", f"/repos/{{repo}}/contents/{issue['file']}?ref=main")
         text = base64.b64decode(cur["content"]).decode() if cur.get("content") else ""
         text = text.replace(f"# known-issue: {key}", f"# fixed: {key} -- {issue['fix']}")
-        gh.api("PUT", f"/repos/{{repo}}/contents/{issue['file']}", {
-            "message": issue["fix"], "branch": branch, "sha": cur["sha"],
-            "content": base64.b64encode(text.encode()).decode(),
-        })
-        pr = gh.api("POST", "/repos/{repo}/pulls", {
-            "title": issue["fix"], "head": branch, "base": "main",
-            "body": f"{issue['fix']}.\n\nFixes #{issues[key]}",
-        })["number"]
+        gh.api(
+            "PUT",
+            f"/repos/{{repo}}/contents/{issue['file']}",
+            {
+                "message": issue["fix"],
+                "branch": branch,
+                "sha": cur["sha"],
+                "content": base64.b64encode(text.encode()).decode(),
+            },
+        )
+        pr = gh.api(
+            "POST",
+            "/repos/{repo}/pulls",
+            {
+                "title": issue["fix"],
+                "head": branch,
+                "base": "main",
+                "body": f"{issue['fix']}.\n\nFixes #{issues[key]}",
+            },
+        )["number"]
         gh.api("PUT", f"/repos/{{repo}}/pulls/{pr}/merge", {"merge_method": "squash"})
         prs[key] = pr
         save(m, gh)
     # 4. Q&A discussions with accepted answers
     discussions = m.setdefault("discussions", {})
-    info = gh.graphql(
-        'query($o:String!,$n:String!){repository(owner:$o,name:$n){id discussionCategories(first:20)'
-        "{nodes{id name isAnswerable}}}}",
-        o=gh.repo.split("/")[0], n=gh.repo.split("/")[1],
-    ) if not gh.dry else {}
+    info = (
+        gh.graphql(
+            "query($o:String!,$n:String!){repository(owner:$o,name:$n){id discussionCategories(first:20)"
+            "{nodes{id name isAnswerable}}}}",
+            o=gh.repo.split("/")[0],
+            n=gh.repo.split("/")[1],
+        )
+        if not gh.dry
+        else {}
+    )
     repo_id = info.get("repository", {}).get("id", "R")
     cats = info.get("repository", {}).get("discussionCategories", {}).get("nodes", [])
     cat_id = next((c["id"] for c in cats if c["isAnswerable"]), "C")
@@ -150,15 +185,21 @@ def seed(gh: GH, m: dict) -> None:
         created = gh.graphql(
             "mutation($r:ID!,$c:ID!,$t:String!,$b:String!){createDiscussion(input:{repositoryId:$r,"
             "categoryId:$c,title:$t,body:$b}){discussion{id number}}}",
-            r=repo_id, c=cat_id, t=d["title"], b=d["body"],
+            r=repo_id,
+            c=cat_id,
+            t=d["title"],
+            b=d["body"],
         )
         disc = created.get("createDiscussion", {}).get("discussion", {"id": "D", "number": 0})
         comment = gh.graphql(
             "mutation($d:ID!,$b:String!){addDiscussionComment(input:{discussionId:$d,body:$b}){comment{id}}}",
-            d=disc["id"], b=d["answer"],
+            d=disc["id"],
+            b=d["answer"],
         )
         cid = comment.get("addDiscussionComment", {}).get("comment", {"id": "K"})["id"]
-        gh.graphql("mutation($i:ID!){markDiscussionCommentAsAnswer(input:{id:$i}){discussion{id}}}", i=cid)
+        gh.graphql(
+            "mutation($i:ID!){markDiscussionCommentAsAnswer(input:{id:$i}){discussion{id}}}", i=cid
+        )
         discussions[key] = disc["number"]
         save(m, gh)
 
@@ -182,18 +223,31 @@ def write_golden(m: dict, repo: str) -> int:
         dups.setdefault(canon, []).append(m["issues"][dup])
     for key, issue in data.ISSUES.items():
         number = m["issues"][key]
-        rows.append({
-            "id": f"issue-{key}", "kind": "issue", "repo": repo, "question": issue["query"],
-            "expected": [number, *dups.get(key, [])], "canonical": number,
-            "resolution": issue["resolution"],
-            "resolved_by": m["prs"].get(key),
-        })
+        rows.append(
+            {
+                "id": f"issue-{key}",
+                "kind": "issue",
+                "repo": repo,
+                "question": issue["query"],
+                "expected": [number, *dups.get(key, [])],
+                "canonical": number,
+                "resolution": issue["resolution"],
+                "resolved_by": m["prs"].get(key),
+            }
+        )
     for key, d in data.DISCUSSIONS.items():
-        rows.append({
-            "id": key, "kind": "discussion", "repo": repo, "question": d["query"],
-            "expected": [m["discussions"][key]], "canonical": m["discussions"][key],
-            "resolution": "answered", "resolved_by": None,
-        })
+        rows.append(
+            {
+                "id": key,
+                "kind": "discussion",
+                "repo": repo,
+                "question": d["query"],
+                "expected": [m["discussions"][key]],
+                "canonical": m["discussions"][key],
+                "resolution": "answered",
+                "resolved_by": None,
+            }
+        )
     GOLDEN.write_text("".join(json.dumps(r) + "\n" for r in rows))
     return len(rows)
 
@@ -209,9 +263,11 @@ def main() -> None:
     seed(gh, m)
     n_issues = len(data.ISSUES) + len(data.DUPLICATES)
     n_prs = sum(1 for i in data.ISSUES.values() if i["resolution"] == "fixed")
-    print(f"{'DRY RUN: ' if args.dry_run else ''}{n_issues} issues, {n_prs} PRs, "
-          f"{len(data.DISCUSSIONS)} discussions, {gh.calls} API calls "
-          f"(~{gh.calls * PAUSE / 60:.1f} min with pacing)")
+    print(
+        f"{'DRY RUN: ' if args.dry_run else ''}{n_issues} issues, {n_prs} PRs, "
+        f"{len(data.DISCUSSIONS)} discussions, {gh.calls} API calls "
+        f"(~{gh.calls * PAUSE / 60:.1f} min with pacing)"
+    )
     if not args.dry_run:
         print(f"wrote {write_golden(m, args.repo)} golden rows to {GOLDEN}")
 

@@ -19,9 +19,13 @@ from langchain_github import GitHubRepoRetriever, GitHubIssuesRetriever
 docs = GitHubRepoRetriever(repo="pallets/click", k=3).invoke(
     "how are environment variables read for options?"
 )
-print(docs[0].metadata["url"])   # https://github.com/pallets/click/blob/<sha>/docs/arguments.md#L146-L192
+print(
+    docs[0].metadata["url"]
+)  # https://github.com/pallets/click/blob/<sha>/docs/arguments.md#L146-L192
 
-issues = GitHubIssuesRetriever(repo="owner/name").invoke("requests hang when all sockets are in use")
+issues = GitHubIssuesRetriever(repo="owner/name").invoke(
+    "requests hang when all sockets are in use"
+)
 m = issues[0].metadata
 print(m["title"], m["resolution"], m["resolved_by_urls"], m["url"])
 ```
@@ -90,11 +94,14 @@ Honest reading: search mode found the answer where hybrid did not on 4 questions
 
 ```python
 from langchain_github import GitHubRepoRetriever
+
 retriever = GitHubRepoRetriever(repo="pallets/click", k=4)
 docs = retriever.invoke("how are environment variables read for options?")
 context = "\n\n".join(f"[{d.metadata['url']}]\n{d.page_content}" for d in docs)
 # send `context` and the question to any chat model; ask it to cite the links.
 ```
+
+`examples/answer_with_llm.py <owner/repo> "<question>"` is the full retrieve-then-answer chain (any chat model via `MODEL=`). Run against `pallets/click` with a real model, it answered from the retrieved passages and cited their line-anchored permalinks.
 
 `examples/try_it.py <owner/repo> "<question>"` prints retrieved passages without any LLM.
 
