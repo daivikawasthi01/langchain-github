@@ -94,3 +94,13 @@ def test_discussion_edits_are_picked_up_when_max_age_passes(fake):
     fake.discussions[0]["updatedAt"] = "y"
     docs = r.invoke("MAX_ATTEMPTS settings")
     assert any("MAX_ATTEMPTS" in d.page_content for d in docs)
+
+
+def test_issue_vectors_survive_a_restart_with_cache_dir(fake, tmp_path):
+    first = Counting()
+    make(embeddings=first, cache_dir=str(tmp_path)).invoke("stream timeout")
+    assert len(first.texts) > 5
+    second = Counting()
+    docs = make(embeddings=second, cache_dir=str(tmp_path)).invoke("stream timeout")
+    assert docs
+    assert second.texts == ["langchain-github model fingerprint"]  # nothing else re-embedded

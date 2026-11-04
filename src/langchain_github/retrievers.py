@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import hashlib
 import threading
 import time
 import warnings
@@ -19,14 +18,7 @@ from langchain_core.retrievers import BaseRetriever
 from pydantic import ConfigDict, Field, PrivateAttr, SecretStr, field_validator
 
 from ._client import DEFAULT_BASE_URL, GitHubClient
-from ._index import (
-    ChunkIndex,
-    ThreadIndex,
-    aembed_all,
-    embed_all,
-    embed_all_with,
-    issue_embed_text,
-)
+from ._index import ChunkIndex, ThreadIndex, embed_text, issue_embed_text
 from ._query import normalize, search_variants
 from ._repo import normalize_repo
 from ._threads import (
@@ -40,6 +32,7 @@ from ._threads import (
     search_candidates,
     thread_documents,
 )
+from ._vectors import VectorCache
 from .loaders import GitHubRepositoryLoader, RepoSnapshot
 
 
@@ -93,7 +86,7 @@ class GitHubRepoRetriever(BaseRetriever):
     _loader_key: tuple[Any, ...] | None = PrivateAttr(default=None)
     _index: ChunkIndex | None = PrivateAttr(default=None)
     _indexed_sha: str | None = PrivateAttr(default=None)
-    _vector_cache: dict[tuple[str, int, int], list[float]] = PrivateAttr(default_factory=dict)
+    _vectors: VectorCache | None = PrivateAttr(default=None)
     _lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
 
     @field_validator("repo")
@@ -148,22 +141,13 @@ class GitHubRepoRetriever(BaseRetriever):
 
     # -- index management -------------------------------------------------------------------------
 
-    def _vectors_for(self, docs: list[Document], fresh: list[list[float]], todo: list[int]) -> None:
-        for i, vec in zip(todo, fresh, strict=True):
-            m = docs[i].metadata
-            self._vector_cache[(m["blob_sha"], m["start_line"], m["end_line"])] = vec
-
-    def _cached_vectors(self, docs: list[Document]) -> tuple[list[list[float]], list[int]]:
-        have: list[list[float]] = [[] for _ in docs]
-        todo: list[int] = []
-        for i, d in enumerate(docs):
-            m = d.metadata
-            cached = self._vector_cache.get((m["blob_sha"], m["start_line"], m["end_line"]))
-            if cached is None:
-                todo.append(i)
-            else:
-                have[i] = cached
-        return have, todo
+    def _vector_cache(self) -> VectorCache:
+        """Vectors by text; kept in ``cache_dir`` too, so a restart does not re-embed."""
+        assert self.embeddings is not None
+        cache = self._vectors
+        if cache is None or cache.embeddings is not self.embeddings:
+            cache = self._vectors = VectorCache(self.embeddings, self.cache_dir)
+        return cache
 
     def _sync_index(self, snap: RepoSnapshot) -> None:
         with self._lock:
@@ -173,12 +157,7 @@ class GitHubRepoRetriever(BaseRetriever):
             docs = list(self.loader.documents(snap))
             vectors = None
             if self.embeddings is not None:
-                vectors, todo = self._cached_vectors(docs)
-                if todo:
-                    fresh = embed_all(self.embeddings, [docs[i] for i in todo])
-                    self._vectors_for(docs, fresh, todo)
-                    for i, v in zip(todo, fresh, strict=True):
-                        vectors[i] = v
+                vectors = self._vector_cache().vectors([embed_text(d) for d in docs])
             self._index, self._indexed_sha = ChunkIndex(docs, vectors), snap.commit_sha
 
     async def _async_index(self, snap: RepoSnapshot) -> None:
@@ -188,12 +167,7 @@ class GitHubRepoRetriever(BaseRetriever):
         docs = list(self.loader.documents(snap))
         vectors = None
         if self.embeddings is not None:
-            vectors, todo = self._cached_vectors(docs)
-            if todo:
-                fresh = await aembed_all(self.embeddings, [docs[i] for i in todo])
-                self._vectors_for(docs, fresh, todo)
-                for i, v in zip(todo, fresh, strict=True):
-                    vectors[i] = v
+            vectors = await self._vector_cache().avectors([embed_text(d) for d in docs])
         index = await asyncio.to_thread(ChunkIndex, docs, vectors)
         self._index, self._indexed_sha = index, snap.commit_sha
 
@@ -259,6 +233,8 @@ class GitHubIssuesRetriever(BaseRetriever):
     """Seconds after which discussions (which the change check cannot see) are re-checked."""
     rebuild_after: float = 86400.0
     """Seconds after which the whole index is rebuilt, which also drops deleted issues."""
+    cache_dir: str | None = None
+    """Persist embedding vectors here (with ``embeddings``) so a restart does not re-embed."""
     base_url: str = DEFAULT_BASE_URL
 
     _client: GitHubClient | None = PrivateAttr(default=None)
@@ -268,7 +244,7 @@ class GitHubIssuesRetriever(BaseRetriever):
     _checked_at: float = PrivateAttr(default=0.0)
     _full_at: float = PrivateAttr(default=0.0)
     _threads: dict[tuple[str, int], Thread] = PrivateAttr(default_factory=dict)
-    _vector_cache: dict[str, list[float]] = PrivateAttr(default_factory=dict)
+    _vectors: VectorCache | None = PrivateAttr(default=None)
     _lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
 
     @field_validator("repo")
@@ -296,22 +272,17 @@ class GitHubIssuesRetriever(BaseRetriever):
                 self._mode = "index" if n <= self.max_index_threads else "search"
         return self._mode
 
-    def _vectors(self, texts: list[str]) -> list[list[float]]:
-        """Embed texts, reusing the vector of any text seen before."""
+    def _embed(self, texts: list[str]) -> list[list[float]]:
         assert self.embeddings is not None
-        keys = [hashlib.sha1(t.encode()).hexdigest() for t in texts]
-        todo = [i for i, key in enumerate(keys) if key not in self._vector_cache]
-        if todo:
-            fresh = embed_all_with(self.embeddings, [texts[i] for i in todo])
-            for i, vec in zip(todo, fresh, strict=True):
-                self._vector_cache[keys[i]] = vec
-        return [self._vector_cache[key] for key in keys]
+        if self._vectors is None or self._vectors.embeddings is not self.embeddings:
+            self._vectors = VectorCache(self.embeddings, self.cache_dir)
+        return self._vectors.vectors(texts)
 
     def _build(self, threads: list[Thread]) -> ThreadIndex:
         docs = [d for t in threads for d in thread_documents(t, self.repo)]
         vectors = None
         if self.embeddings is not None and docs:
-            vectors = self._vectors([issue_embed_text(d) for d in docs])
+            vectors = self._embed([issue_embed_text(d) for d in docs])
         return ThreadIndex(docs, vectors)
 
     def _refresh_index(self) -> None:
@@ -378,7 +349,7 @@ class GitHubIssuesRetriever(BaseRetriever):
         vectors = None
         qvec = None
         if self.embeddings is not None:
-            vectors = self._vectors([issue_embed_text(d) for d in docs])
+            vectors = self._embed([issue_embed_text(d) for d in docs])
             qvec = self.embeddings.embed_query(query)
         return ThreadIndex(docs, vectors).search(normalize(query), k, qvec, prior, prior_only=True)
 

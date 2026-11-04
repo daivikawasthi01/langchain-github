@@ -8,7 +8,6 @@ from collections import Counter
 from collections.abc import Sequence
 
 from langchain_core.documents import Document
-from langchain_core.embeddings import Embeddings
 
 _IDENT = re.compile(r"[A-Za-z_][A-Za-z0-9_]*|\d+")
 _CAMEL = re.compile(r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])")
@@ -164,29 +163,6 @@ def _overlaps(a: Document, b: Document) -> bool:
         return False
     smaller = min(ma["end_line"] - ma["start_line"], mb["end_line"] - mb["start_line"]) + 1
     return bool((hi - lo + 1) / smaller > 0.5)
-
-
-def embed_all(embeddings: Embeddings, docs: list[Document], batch: int = 64) -> list[list[float]]:
-    out: list[list[float]] = []
-    for i in range(0, len(docs), batch):
-        out.extend(embeddings.embed_documents([embed_text(d) for d in docs[i : i + batch]]))
-    return out
-
-
-def embed_all_with(embeddings: Embeddings, texts: list[str], batch: int = 64) -> list[list[float]]:
-    out: list[list[float]] = []
-    for i in range(0, len(texts), batch):
-        out.extend(embeddings.embed_documents(texts[i : i + batch]))
-    return out
-
-
-async def aembed_all(
-    embeddings: Embeddings, docs: list[Document], batch: int = 64
-) -> list[list[float]]:
-    out: list[list[float]] = []
-    for i in range(0, len(docs), batch):
-        out.extend(await embeddings.aembed_documents([embed_text(d) for d in docs[i : i + batch]]))
-    return out
 
 
 def issue_embed_text(doc: Document) -> str:
