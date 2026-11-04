@@ -90,6 +90,31 @@ Honest reading: search mode found the answer where hybrid did not on 4 questions
 - `search` (larger repos): GitHub search proposes up to `max_candidates=15` threads, which are fetched in full. Order stays GitHub's; you gain the best passage, comment link and resolution. Semantic/hybrid search is limited to 10 requests/minute by GitHub, and the client waits rather than failing.
 - `auto` (default) counts issues once and picks.
 
+## Keyword mode vs embeddings
+
+Without `embeddings=`, ranking is keyword-based (BM25), so it matches words, not meaning. If your question uses different words than the code and docs, it can miss. Example on `pallets/click`, top 6 results:
+
+| question | keyword only | with embeddings (`bge-small-en-v1.5`) |
+|---|---|---|
+| "how are **env vars** read for options?" | `shell_completion.py` first (it contains the literal word `env`); `docs/options.md` absent | `docs/options.md` and `docs/arguments.md` in the top 5; shell-completion gone; test files still rank high |
+| "**environment variable envvar** option value" | `core.py`, then `docs/options.md` x3 | same pages, slightly better order |
+
+So keyword mode is fine when you use the project's own vocabulary (identifiers, error text, "envvar") and weak on casual paraphrase or abbreviations. For natural-language questions, pass any LangChain `Embeddings`:
+
+```python
+from fastembed import TextEmbedding            # any Embeddings works: OpenAI, Google, HuggingFace, ...
+from langchain_core.embeddings import Embeddings
+
+class Fast(Embeddings):
+    def __init__(self): self.m = TextEmbedding("BAAI/bge-small-en-v1.5")
+    def embed_documents(self, texts): return [v.tolist() for v in self.m.embed(texts)]
+    def embed_query(self, t): return next(iter(self.m.embed([t]))).tolist()
+
+retriever = GitHubRepoRetriever(repo="pallets/click", embeddings=Fast())
+```
+
+Cost to know about: embeddings are computed for every chunk when the index is first built (about 2.5 minutes on a laptop CPU for `pallets/click` with this small local model; a hosted embedding API is usually faster). Queries after that are fast. This is a single-question comparison, not a benchmark; the measured retrieval numbers above are the ones to rely on.
+
 ## Getting a written answer
 
 ```python
