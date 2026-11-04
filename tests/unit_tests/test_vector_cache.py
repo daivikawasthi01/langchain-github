@@ -59,17 +59,6 @@ def test_without_cache_dir_nothing_is_written_and_no_probe_is_sent(tmp_path):
     assert m.asked == ["alpha"]
 
 
-async def test_async_uses_the_same_file(tmp_path):
-    class AsyncModel(Model):
-        async def aembed_documents(self, texts):
-            return self.embed_documents(texts)
-
-    await VectorCache(AsyncModel(), tmp_path).avectors(["alpha"])
-    again = AsyncModel()
-    await VectorCache(again, tmp_path).avectors(["alpha"])
-    assert again.real == []
-
-
 def test_repo_retriever_does_not_re_embed_after_a_restart(tmp_path):
     _, router = build()
     with router:

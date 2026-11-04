@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import threading
 import time
+import weakref
 from collections import deque
 from collections.abc import AsyncIterator, Callable, Iterator
 from typing import Any
@@ -329,6 +330,8 @@ class GitHubClient:
     ) -> None:
         self._core = _Core(token, base_url, max_retries, max_wait, user_agent)
         self._http = http or httpx.Client(timeout=timeout, follow_redirects=True)
+        if http is None:  # we made it, so close it when this client is collected
+            weakref.finalize(self, self._http.close)
         self._sleep = sleep
 
     @property

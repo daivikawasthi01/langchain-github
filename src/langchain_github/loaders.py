@@ -14,6 +14,7 @@ from urllib.parse import quote
 from langchain_core.document_loaders import BaseLoader
 from langchain_core.documents import Document
 from pydantic import SecretStr
+from typing_extensions import Self
 
 from ._chunk import Chunker, language_for
 from ._client import (
@@ -105,8 +106,8 @@ class GitHubRepositoryLoader(BaseLoader):
         self._store = BlobStore(cache_dir)
         self._token = token
         self._base_url = base_url
-        self._client = client
-        self._async_client = async_client
+        self._client = self._given_client = client
+        self._async_client = self._given_async_client = async_client
         self._default_branch: str | None = None
 
     # -- clients are created lazily so constructing a loader never opens sockets -----------------
@@ -122,6 +123,23 @@ class GitHubRepositoryLoader(BaseLoader):
         if self._async_client is None:
             self._async_client = AsyncGitHubClient(self._token, base_url=self._base_url)
         return self._async_client
+
+    def close(self) -> None:
+        """Close the connection this loader opened (a client you passed in is left alone)."""
+        if self._client is not None and self._client is not self._given_client:
+            self._client.close()
+            self._client = None
+
+    async def aclose(self) -> None:
+        if self._async_client is not None and self._async_client is not self._given_async_client:
+            await self._async_client.aclose()
+            self._async_client = None
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        self.close()
 
     # -- snapshot ---------------------------------------------------------------------------------
 

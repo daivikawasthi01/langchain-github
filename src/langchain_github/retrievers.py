@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import threading
 import time
 import warnings
@@ -16,6 +17,7 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.retrievers import BaseRetriever
 from pydantic import ConfigDict, Field, PrivateAttr, SecretStr, field_validator
+from typing_extensions import Self
 
 from ._client import DEFAULT_BASE_URL, GitHubClient
 from ._index import ChunkIndex, ThreadIndex, embed_text, issue_embed_text
@@ -44,7 +46,45 @@ def _resolve_k(k: int | None, default: int) -> int:
     return k
 
 
-class GitHubRepoRetriever(BaseRetriever):
+class _Retriever(BaseRetriever):
+    """Behaviour both retrievers share: closing, pickling and copying.
+
+    Clients, locks and indexes are rebuilt on demand, so a retriever can be pickled (for
+    multiprocessing) or deep-copied, and the copy simply re-fetches what it needs.
+    """
+
+    _lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
+
+    def _close(self) -> None:
+        raise NotImplementedError
+
+    def close(self) -> None:
+        """Close the HTTP connections. The retriever can still be used; it reconnects."""
+        with self._lock:
+            self._close()
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        self.close()
+
+    def __getstate__(self) -> dict[Any, Any]:
+        state = super().__getstate__()
+        state["__pydantic_private__"] = None  # clients, locks and indexes are rebuilt lazily
+        return state
+
+    def __setstate__(self, state: dict[Any, Any]) -> None:
+        super().__setstate__(state)
+        self.model_post_init(None)  # recreate the private attributes with their defaults
+
+    def __deepcopy__(self, memo: dict[int, Any] | None = None) -> Self:
+        new = type(self).__new__(type(self))
+        new.__setstate__(copy.deepcopy(self.__getstate__(), memo))
+        return new
+
+
+class GitHubRepoRetriever(_Retriever):
     """Answer questions about a repository's code and docs with line-anchored passages.
 
     The first query indexes the repository (one tarball request for a typical repo). Every query
@@ -79,20 +119,30 @@ class GitHubRepoRetriever(BaseRetriever):
     """Optional embedding model; enables hybrid (BM25 + semantic) ranking."""
     cache_dir: str | None = None
     """Persist downloaded files between runs, keyed by git blob SHA."""
+    max_archive_mb: int = 200
+    """Refuse repository downloads larger than this."""
+    blob_fetch_threshold: int = 25
+    """Above this many uncached files, download one tarball instead of file by file."""
+    check_every: float = Field(default=0.0, ge=0)
+    """Seconds to go without asking GitHub whether the branch moved. 0 checks on every query
+    (about 0.8 s, and free of rate limit when nothing changed)."""
     base_url: str = DEFAULT_BASE_URL
-    loader_options: dict[str, Any] = Field(default_factory=dict)
 
     _loader: GitHubRepositoryLoader | None = PrivateAttr(default=None)
     _loader_key: tuple[Any, ...] | None = PrivateAttr(default=None)
     _index: ChunkIndex | None = PrivateAttr(default=None)
     _indexed_sha: str | None = PrivateAttr(default=None)
+    _checked_at: float = PrivateAttr(default=0.0)
     _vectors: VectorCache | None = PrivateAttr(default=None)
-    _lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
 
     @field_validator("repo")
     @classmethod
     def _check_repo(cls, value: str) -> str:
         return normalize_repo(value)
+
+    def _close(self) -> None:
+        if self._loader is not None:
+            self._loader.close()
 
     def _config_key(self) -> tuple[Any, ...]:
         """Everything the loader is built from, so changing an option after use takes effect."""
@@ -108,7 +158,8 @@ class GitHubRepoRetriever(BaseRetriever):
             self.chunk_overlap,
             self.cache_dir,
             self.base_url,
-            repr(self.loader_options),
+            self.max_archive_mb,
+            self.blob_fetch_threshold,
         )
 
     @property
@@ -116,6 +167,7 @@ class GitHubRepoRetriever(BaseRetriever):
         key = self._config_key()
         if self._loader is not None and key != self._loader_key:
             self._loader, self._index, self._indexed_sha = None, None, None
+            self._checked_at = 0.0
         if self._loader is None:
             self._loader_key = key
             self._loader = GitHubRepositoryLoader(
@@ -130,7 +182,8 @@ class GitHubRepoRetriever(BaseRetriever):
                 chunk_overlap=self.chunk_overlap,
                 cache_dir=self.cache_dir,
                 base_url=self.base_url,
-                **self.loader_options,
+                max_archive_mb=self.max_archive_mb,
+                blob_fetch_threshold=self.blob_fetch_threshold,
             )
         return self._loader
 
@@ -150,51 +203,41 @@ class GitHubRepoRetriever(BaseRetriever):
         return cache
 
     def _sync_index(self, snap: RepoSnapshot) -> None:
-        with self._lock:
-            if snap.commit_sha == self._indexed_sha:
-                return
-            self.loader.fetch(snap)
-            docs = list(self.loader.documents(snap))
-            vectors = None
-            if self.embeddings is not None:
-                vectors = self._vector_cache().vectors([embed_text(d) for d in docs])
-            self._index, self._indexed_sha = ChunkIndex(docs, vectors), snap.commit_sha
-
-    async def _async_index(self, snap: RepoSnapshot) -> None:
         if snap.commit_sha == self._indexed_sha:
             return
-        await self.loader.afetch(snap)
+        self.loader.fetch(snap)
         docs = list(self.loader.documents(snap))
         vectors = None
         if self.embeddings is not None:
-            vectors = await self._vector_cache().avectors([embed_text(d) for d in docs])
-        index = await asyncio.to_thread(ChunkIndex, docs, vectors)
-        self._index, self._indexed_sha = index, snap.commit_sha
-
-    def _search(
-        self, query: str, k: int | None, query_vector: list[float] | None
-    ) -> list[Document]:
-        assert self._index is not None
-        return self._index.search(query, _resolve_k(k, self.k), query_vector)
+            vectors = self._vector_cache().vectors([embed_text(d) for d in docs])
+        self._index, self._indexed_sha = ChunkIndex(docs, vectors), snap.commit_sha
 
     # -- BaseRetriever API ------------------------------------------------------------------------
+
+    def _run(self, query: str, k: int | None) -> list[Document]:
+        k = _resolve_k(k, self.k)
+        qvec = self.embeddings.embed_query(query) if self.embeddings else None
+        with self._lock:  # one index build at a time, however many threads or tasks ask
+            loader = self.loader  # notices options changed since the last query
+            now = time.monotonic()
+            if self._index is None or now - self._checked_at >= self.check_every:
+                self._sync_index(loader.snapshot())
+                self._checked_at = now
+            assert self._index is not None
+            return self._index.search(query, k, qvec)
 
     def _get_relevant_documents(
         self, query: str, *, run_manager: CallbackManagerForRetrieverRun, k: int | None = None
     ) -> list[Document]:
-        self._sync_index(self.loader.snapshot())
-        qvec = self.embeddings.embed_query(query) if self.embeddings else None
-        return self._search(query, k, qvec)
+        return self._run(query, k)
 
     async def _aget_relevant_documents(
         self, query: str, *, run_manager: AsyncCallbackManagerForRetrieverRun, k: int | None = None
     ) -> list[Document]:
-        await self._async_index(await self.loader.asnapshot())
-        qvec = await self.embeddings.aembed_query(query) if self.embeddings else None
-        return self._search(query, k, qvec)
+        return await asyncio.to_thread(self._run, query, k)
 
 
-class GitHubIssuesRetriever(BaseRetriever):
+class GitHubIssuesRetriever(_Retriever):
     """Find the issue, discussion or comment that answers a problem, with how it was resolved.
 
     Ask in your own words or paste a traceback. Results are the best-matching passage of each
@@ -245,12 +288,16 @@ class GitHubIssuesRetriever(BaseRetriever):
     _full_at: float = PrivateAttr(default=0.0)
     _threads: dict[tuple[str, int], Thread] = PrivateAttr(default_factory=dict)
     _vectors: VectorCache | None = PrivateAttr(default=None)
-    _lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
 
     @field_validator("repo")
     @classmethod
     def _check_repo(cls, value: str) -> str:
         return normalize_repo(value)
+
+    def _close(self) -> None:
+        if self._client is not None:
+            self._client.close()
+            self._client = None
 
     @property
     def client(self) -> GitHubClient:

@@ -14,13 +14,6 @@ _PROBE = "langchain-github model fingerprint"
 _DIGEST = 20  # bytes of SHA-1
 
 
-async def _aembed(embeddings: Embeddings, texts: list[str], batch: int = 64) -> list[list[float]]:
-    out: list[list[float]] = []
-    for i in range(0, len(texts), batch):
-        out.extend(await embeddings.aembed_documents(texts[i : i + batch]))
-    return out
-
-
 def _embed(embeddings: Embeddings, texts: list[str], batch: int = 64) -> list[list[float]]:
     out: list[list[float]] = []
     for i in range(0, len(texts), batch):
@@ -110,13 +103,4 @@ class VectorCache:
         todo = self._missing(keys)
         if todo:
             self._remember(keys, todo, _embed(self.embeddings, [texts[i] for i in todo]))
-        return [self._mem[k] for k in keys]
-
-    async def avectors(self, texts: list[str]) -> list[list[float]]:
-        if not self._ready:
-            self._open((await self.embeddings.aembed_documents([_PROBE]))[0])
-        keys = [self.key(t) for t in texts]
-        todo = self._missing(keys)
-        if todo:
-            self._remember(keys, todo, await _aembed(self.embeddings, [texts[i] for i in todo]))
         return [self._mem[k] for k in keys]
