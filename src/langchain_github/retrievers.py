@@ -63,7 +63,7 @@ class GitHubRepoRetriever(BaseRetriever):
     k: int = 5
     """Number of passages to return."""
     token: SecretStr | None = None
-    """GitHub token; falls back to the ``GITHUB_TOKEN`` environment variable."""
+    """GitHub token; falls back to ``GITHUB_TOKEN``, ``GH_TOKEN``, then ``gh auth login``."""
     include: list[str] | None = None
     exclude: list[str] | None = None
     extensions: list[str] | None = None

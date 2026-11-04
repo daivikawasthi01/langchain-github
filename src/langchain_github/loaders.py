@@ -54,8 +54,9 @@ class GitHubRepositoryLoader(BaseLoader):
     Args:
         repo: ``"owner/name"``.
         ref: Branch, tag or commit SHA. Defaults to the repository's default branch.
-        token: GitHub token (falls back to ``GITHUB_TOKEN``). Optional for public repos, but
-            unauthenticated requests are limited to 60 per hour.
+        token: GitHub token. Falls back to ``GITHUB_TOKEN``, ``GH_TOKEN``, then the GitHub CLI
+            login (``gh auth login``). Optional for public repos, but unauthenticated requests
+            are limited to 60 per hour.
         include: Glob patterns a path must match (e.g. ``["docs/**", "*.py"]``).
         exclude: Glob patterns to drop. Replaces the defaults (``node_modules/``, lock files,
             minified assets, ...) when given.

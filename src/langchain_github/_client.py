@@ -11,6 +11,8 @@ from __future__ import annotations
 import asyncio
 import os
 import random
+import shutil
+import subprocess
 import threading
 import time
 from collections import deque
@@ -85,10 +87,37 @@ class _Limiter:
         return max((w.reserve() for w in self._windows.get(resource, [])), default=0.0)
 
 
-def _resolve_token(token: str | SecretStr | None) -> str | None:
+_NO_TOKEN_HINT = (
+    " You are not signed in, which allows only 60 requests an hour. Run `gh auth login` once"
+    " (https://cli.github.com) or set GITHUB_TOKEN."
+)
+
+
+def _gh_cli_token() -> str | None:
+    """Token from the GitHub CLI (``gh auth login``), or ``None`` if it is missing or logged out."""
+    gh = shutil.which("gh")
+    if not gh:
+        return None
+    try:
+        out = subprocess.run(  # noqa: S603
+            [gh, "auth", "token"], capture_output=True, text=True, timeout=5, check=False
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return out.stdout.strip() or None if out.returncode == 0 else None
+
+
+def _resolve_token(token: str | SecretStr | None, base_url: str = DEFAULT_BASE_URL) -> str | None:
+    """The explicit token, else ``GITHUB_TOKEN``, ``GH_TOKEN``, then the GitHub CLI's login.
+
+    The CLI's token belongs to github.com, so it is only used for the default API URL.
+    """
     if isinstance(token, SecretStr):
         token = token.get_secret_value()
-    return token or os.environ.get("GITHUB_TOKEN") or None
+    found = token or os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+    if not found and base_url.rstrip("/") == DEFAULT_BASE_URL:
+        found = _gh_cli_token()
+    return found or None
 
 
 def _cache_key(method: str, url: str, params: dict[str, Any] | None) -> str:
@@ -118,7 +147,7 @@ class _Core:
             "X-GitHub-Api-Version": API_VERSION,
             "User-Agent": user_agent,
         }
-        resolved = _resolve_token(token)
+        resolved = _resolve_token(token, base_url)
         if resolved:
             self._headers["Authorization"] = f"Bearer {resolved}"
 
@@ -156,7 +185,9 @@ class _Core:
         if status < 400 or status == 304:
             return None
         if status == 401:
-            raise GitHubAuthError("Bad credentials (401). Check your GitHub token.")
+            raise GitHubAuthError(
+                "Bad credentials (401). Check your GitHub token, or run `gh auth login` again."
+            )
         if status == 404:
             raise GitHubNotFoundError(f"Not found: {resp.request.url.path}")
         if status in (403, 429):
@@ -165,7 +196,9 @@ class _Core:
                 raise GitHubAuthError(f"Forbidden (403): {self._message(resp)}")
             if wait > self.max_wait or attempt >= self.max_retries:
                 raise GitHubRateLimitError(
-                    f"Rate limited; would need to wait {wait:.0f}s ({self._message(resp)})", wait
+                    f"Rate limited; would need to wait {wait:.0f}s ({self._message(resp)})."
+                    + ("" if self.authenticated else _NO_TOKEN_HINT),
+                    wait,
                 )
             return wait
         if status >= 500 and attempt < self.max_retries:

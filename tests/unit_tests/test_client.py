@@ -10,6 +10,7 @@ from langchain_github._client import (
     GitHubNotFoundError,
     GitHubRateLimitError,
     _Limiter,
+    _resolve_token,
     _Window,
 )
 
@@ -241,3 +242,31 @@ def test_get_text_revalidates_with_etag():
     assert client.get_text("/repos/o/r/commits/main", accept=sha_media) == "a" * 40
     assert route.calls[1].request.headers["if-none-match"] == '"c1"'
     assert route.calls[1].request.headers["accept"] == sha_media
+
+
+def test_token_falls_back_to_gh_token_then_gh_cli(monkeypatch):
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    monkeypatch.setenv("GH_TOKEN", "ghtok")
+    assert _resolve_token(None) == "ghtok"
+    monkeypatch.delenv("GH_TOKEN")
+    monkeypatch.setattr("langchain_github._client._gh_cli_token", lambda: "clitok")
+    assert _resolve_token(None) == "clitok"
+    assert _resolve_token("explicit") == "explicit"
+    # the CLI's github.com login must not be sent to another host
+    assert _resolve_token(None, "https://ghe.example.com/api/v3") is None
+
+
+def test_gh_cli_token_handles_missing_and_logged_out(monkeypatch):
+    import subprocess
+
+    from langchain_github import _client
+
+    monkeypatch.setattr(_client.shutil, "which", lambda _: None)
+    assert _client._gh_cli_token() is None
+    monkeypatch.setattr(_client.shutil, "which", lambda _: "/usr/bin/gh")
+    done = subprocess.CompletedProcess([], 0, stdout="abc\n", stderr="")
+    monkeypatch.setattr(_client.subprocess, "run", lambda *a, **k: done)
+    assert _client._gh_cli_token() == "abc"
+    failed = subprocess.CompletedProcess([], 1, stdout="", stderr="not logged in")
+    monkeypatch.setattr(_client.subprocess, "run", lambda *a, **k: failed)
+    assert _client._gh_cli_token() is None
