@@ -131,6 +131,14 @@ def _resolve_token(token: str | SecretStr | None, base_url: str = DEFAULT_BASE_U
     return found or None
 
 
+def web_url(base_url: str) -> str:
+    """The site that serves the web pages for an API URL (permalinks point there)."""
+    base = base_url.rstrip("/")
+    if base == DEFAULT_BASE_URL:
+        return "https://github.com"
+    return base[: -len("/api/v3")] if base.endswith("/api/v3") else base
+
+
 def _cache_key(method: str, url: str, params: dict[str, Any] | None) -> str:
     return f"{method} {url} {sorted((params or {}).items())}"
 

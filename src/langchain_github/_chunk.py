@@ -53,7 +53,10 @@ def language_for(path: str) -> str | None:
 class Chunker:
     """Splits files with language-aware separators and records exact line ranges."""
 
-    def __init__(self, chunk_size: int = 1500, chunk_overlap: int = 150) -> None:
+    def __init__(
+        self, chunk_size: int = 1500, chunk_overlap: int = 150, site: str = "https://github.com"
+    ) -> None:
+        self.site = site
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
         self._splitters: dict[Language | None, RecursiveCharacterTextSplitter] = {}
@@ -94,7 +97,7 @@ class Chunker:
             start_idx = int(piece.metadata.get("start_index", 0))
             start = text.count("\n", 0, start_idx) + 1
             end = start + piece.page_content.count("\n")
-            url = permalink(repo, commit_sha, path, start, end)
+            url = permalink(repo, commit_sha, path, start, end, self.site)
             docs.append(
                 Document(
                     page_content=piece.page_content,

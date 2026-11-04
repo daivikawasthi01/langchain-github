@@ -3,7 +3,7 @@
 LangChain retrievers and loaders for GitHub repositories, issues and discussions.
 
 - **`GitHubRepoRetriever`**: ask a question about a repo and get the best code and doc passages, each with a permalink to the exact commit and lines. Works on any branch, tag or commit.
-- **`GitHubIssuesRetriever`**: describe a problem or paste a traceback and get the matching issue, discussion or comment, with how it was resolved (`fixed`, `answered`, `wontfix`, `duplicate`, `open`) and the PR that closed it.
+- **`GitHubIssuesRetriever`**: describe a problem or paste a traceback and get the matching issue, discussion or comment, with how it was resolved (`fixed`, `answered`, `closed`, `wontfix`, `duplicate`, `open`) and the PR that closed it.
 - **`GitHubRepositoryLoader`**, **`GitHubIssuesLoader`**: the same data as plain `Document`s.
 
 ## Installation
@@ -30,12 +30,12 @@ docs = GitHubRepoRetriever(repo="pallets/click", k=3).invoke(
 )
 print(docs[0].metadata["url"])  # https://github.com/pallets/click/blob/<sha>/docs/options.md#L677-L690
 
-issues = GitHubIssuesRetriever(repo="owner/name").invoke("requests hang when all sockets are in use")
+issues = GitHubIssuesRetriever(repo="psf/requests").invoke("requests hang when all sockets are in use")
 m = issues[0].metadata
 print(m["title"], m["resolution"], m["resolved_by_urls"], m["url"])
 ```
 
-Both retrievers support `ainvoke`, and `k` can be set on the retriever or per call.
+Both retrievers support `ainvoke`, and `k` can be set on the retriever or per call. Use `with GitHubRepoRetriever(...) as retriever:` (or call `retriever.close()`) to close connections when you are done.
 
 ## Use with a chat model
 
@@ -65,7 +65,7 @@ print(chain.invoke("how are environment variables read for options?"))
 |---|---|---|---|
 | `ref=` | Branch, tag or commit (repo retriever). | `GitHubRepoRetriever(repo="pallets/click", ref="8.1.7")` | Searches the code as it was at release 8.1.7, not the latest version. Links point to that exact commit. |
 | `embeddings=` | Any LangChain `Embeddings`; turns on hybrid ranking. Recommended for natural-language questions. | `GitHubRepoRetriever(repo="pallets/click", embeddings=Fast())` (`Fast` is defined below) | Matches on meaning as well as words, so "env vars" also finds text about "environment variables". |
-| `cache_dir=` | Cache downloads so a new commit refetches only changed files. | `GitHubRepoRetriever(repo="pallets/click", cache_dir=".cache/gh")` | Saves downloaded files in `.cache/gh`. The next run reuses them and only fetches what changed. |
+| `cache_dir=` | Cache downloads (and embeddings, if used) so a new commit refetches only changed files and a restart is fast. | `GitHubRepoRetriever(repo="pallets/click", cache_dir=".cache/gh")` | Saves downloaded files in `.cache/gh`. The next run reuses them and only fetches what changed. |
 | `include` / `exclude` / `extensions` | Filter files with gitignore-style globs. | `GitHubRepoRetriever(repo="pallets/click", include=["docs/**"], extensions=[".md"])` | Only searches Markdown files under `docs/`, so code and tests never show up in results. |
 | `mode=` | Issues retriever: `index`, `search` or `auto` (default). | `GitHubIssuesRetriever(repo="pallets/click", mode="search")` | Asks GitHub's own search for candidate issues instead of downloading every issue first. |
 
@@ -86,7 +86,7 @@ class Fast(Embeddings):
         return next(iter(self.model.embed([text]))).tolist()
 ```
 
-The first query builds the index, which takes a couple of minutes on a laptop for a repo like click. Later queries are fast.
+The first query builds the index, which takes a couple of minutes on a laptop for a repo like click. Later queries are fast. With `cache_dir=` that work is saved, so the next run does not repeat it.
 
 ## How well does it work?
 

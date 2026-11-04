@@ -76,7 +76,11 @@ class Thread:
 
     @property
     def resolution(self) -> str:
-        """``fixed`` | ``answered`` | ``wontfix`` | ``duplicate`` | ``open``."""
+        """``fixed`` | ``answered`` | ``closed`` | ``wontfix`` | ``duplicate`` | ``open``.
+
+        ``closed`` is an issue closed as completed with no linked pull request and no comments, so
+        nothing says how it was resolved (it may have been fixed by a plain commit).
+        """
         if self.kind == "discussion":
             return "answered" if any(c.is_answer for c in self.comments) else "open"
         if self.state == "open":
@@ -85,7 +89,9 @@ class Thread:
             return "duplicate"
         if self.state_reason == "not_planned":
             return "wontfix"
-        return "fixed" if self.resolved_by else "answered"
+        if self.resolved_by:
+            return "fixed"
+        return "answered" if self.comments else "closed"
 
 
 def closing_references(text: str | None, repo: str | None = None) -> list[int]:
@@ -513,7 +519,11 @@ def _pieces(text: str, limit: int = MAX_PIECE_CHARS) -> list[str]:
 
 def thread_documents(thread: Thread, repo: str) -> list[Document]:
     """One Document per body/comment piece, each carrying thread-level metadata."""
-    resolved_urls = [f"https://github.com/{repo}/pull/{n}" for n in thread.resolved_by]
+    site = re.match(r"https?://[^/]+", thread.url)
+    resolved_urls = [
+        f"{site.group(0) if site else 'https://github.com'}/{repo}/pull/{n}"
+        for n in thread.resolved_by
+    ]
     base = {
         "repo": repo,
         "kind": thread.kind,

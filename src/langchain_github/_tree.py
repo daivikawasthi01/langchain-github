@@ -114,6 +114,11 @@ class PathFilter:
             return any(regex.match(part) for part in parts)
         return any(regex.match("/".join(parts[: i + 1])) for i in range(len(parts)))
 
+    def prunes(self, directory: str) -> bool:
+        """True if everything under ``directory`` is excluded, so it need not be listed."""
+        probe = f"{directory.rstrip('/')}/\0"
+        return any(self._hit(r, probe) for r in self._exclude)
+
     def accepts(self, entry: TreeEntry) -> bool:
         suffix = Path(entry.path).suffix.lower()
         if suffix in BINARY_EXTENSIONS or entry.size > self.max_file_size:
@@ -166,8 +171,15 @@ def extract_tarball(data: bytes, wanted: dict[str, str]) -> dict[str, str | None
     return found
 
 
-def permalink(repo: str, commit_sha: str, path: str, start: int | None, end: int | None) -> str:
-    url = f"https://github.com/{repo}/blob/{commit_sha}/{quote(path)}"
+def permalink(
+    repo: str,
+    commit_sha: str,
+    path: str,
+    start: int | None,
+    end: int | None,
+    site: str = "https://github.com",
+) -> str:
+    url = f"{site}/{repo}/blob/{commit_sha}/{quote(path)}"
     if start is None:
         return url
     return f"{url}#L{start}" if end in (None, start) else f"{url}#L{start}-L{end}"

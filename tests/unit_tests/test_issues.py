@@ -76,7 +76,11 @@ def test_resolution_states():
         build_issue_thread(issue(1, "t", "b", "closed", "completed"), [], [7]).resolution == "fixed"
     )
     assert (
-        build_issue_thread(issue(1, "t", "b", "closed", "completed"), [], []).resolution
+        build_issue_thread(issue(1, "t", "b", "closed", "completed"), [], []).resolution == "closed"
+    )
+    discussed = [comment(1, 1, "Should work in the next release.")]
+    assert (
+        build_issue_thread(issue(1, "t", "b", "closed", "completed"), discussed, []).resolution
         == "answered"
     )
     assert (

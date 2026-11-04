@@ -241,9 +241,9 @@ class GitHubIssuesRetriever(_Retriever):
     """Find the issue, discussion or comment that answers a problem, with how it was resolved.
 
     Ask in your own words or paste a traceback. Results are the best-matching passage of each
-    thread, linked to the exact comment, with ``resolution`` (``fixed``, ``answered``, ``wontfix``,
-    ``duplicate``, ``open``) and ``resolved_by`` (merged PR numbers). A thread closed as a
-    duplicate is replaced by the thread it points to.
+    thread, linked to the exact comment, with ``resolution`` (``fixed``, ``answered``, ``closed``,
+    ``wontfix``, ``duplicate``, ``open``) and ``resolved_by`` (merged PR numbers). A thread closed
+    as a duplicate is replaced by the thread it points to.
 
     Two strategies, chosen by ``mode``:
 
@@ -401,8 +401,10 @@ class GitHubIssuesRetriever(_Retriever):
         return ThreadIndex(docs, vectors).search(normalize(query), k, qvec, prior, prior_only=True)
 
     def _run(self, query: str, k: int | None) -> list[Document]:
+        k = _resolve_k(k, self.k)
+        if not query.strip():
+            return []
         with self._lock:
-            k = _resolve_k(k, self.k)
             if self._decide() == "search":
                 return self._search_mode(query, k)
             self._refresh_index()

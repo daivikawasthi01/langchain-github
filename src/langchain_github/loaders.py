@@ -23,6 +23,7 @@ from ._client import (
     GitHubClient,
     GitHubError,
     GitHubNotFoundError,
+    web_url,
 )
 from ._repo import normalize_repo
 from ._threads import Thread, fetch_all_issues, fetch_discussions, thread_documents
@@ -102,7 +103,8 @@ class GitHubRepositoryLoader(BaseLoader):
         self.blob_fetch_threshold = blob_fetch_threshold
         self.max_archive_bytes = max_archive_mb * 1_000_000
         self._filter = PathFilter(include, exclude, extensions, max_file_size)
-        self._chunker = Chunker(chunk_size, chunk_overlap)
+        self._site = web_url(base_url)
+        self._chunker = Chunker(chunk_size, chunk_overlap, self._site)
         self._store = BlobStore(cache_dir)
         self._token = token
         self._base_url = base_url
@@ -219,7 +221,8 @@ class GitHubRepositoryLoader(BaseLoader):
             for node in self.client.get_json(f"/repos/{self.repo}/git/trees/{sha}")["tree"]:
                 path = f"{prefix}{node['path']}"
                 if node["type"] == "tree":
-                    stack.append((f"{path}/", node["sha"]))
+                    if not self._filter.prunes(path):
+                        stack.append((f"{path}/", node["sha"]))
                 else:
                     out.append({**node, "path": path})
         return out
@@ -233,7 +236,8 @@ class GitHubRepositoryLoader(BaseLoader):
             for node in tree["tree"]:
                 path = f"{prefix}{node['path']}"
                 if node["type"] == "tree":
-                    stack.append((f"{path}/", node["sha"]))
+                    if not self._filter.prunes(path):
+                        stack.append((f"{path}/", node["sha"]))
                 else:
                     out.append({**node, "path": path})
         return out
@@ -301,7 +305,7 @@ class GitHubRepositoryLoader(BaseLoader):
                 )
             else:
                 end = text.count("\n") + 1
-                url = permalink(snap.repo, snap.commit_sha, e.path, 1, end)
+                url = permalink(snap.repo, snap.commit_sha, e.path, 1, end, self._site)
                 yield Document(
                     page_content=text,
                     metadata={
@@ -337,8 +341,9 @@ class GitHubIssuesLoader(BaseLoader):
     """Load a repository's issues and discussions as Documents, one per body or comment.
 
     Every Document carries its thread's ``state``, ``resolution`` (``fixed``, ``answered``,
-    ``wontfix``, ``duplicate`` or ``open``), the merged PRs that closed it (``resolved_by``) and a
-    link to the exact comment. Pull requests are skipped. Discussions are included when enabled.
+    ``closed``, ``wontfix``, ``duplicate`` or ``open``), the merged PRs that closed it
+    (``resolved_by``) and a link to the exact comment. Pull requests are skipped. Discussions
+    are included when enabled, and only when you are signed in.
     """
 
     def __init__(
