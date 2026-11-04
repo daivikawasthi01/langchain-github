@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+import warnings
 from collections.abc import AsyncIterator, Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -16,6 +17,7 @@ from pydantic import SecretStr
 
 from ._chunk import Chunker, language_for
 from ._client import DEFAULT_BASE_URL, AsyncGitHubClient, GitHubClient
+from ._repo import normalize_repo
 from ._threads import Thread, fetch_all_issues, fetch_discussions, thread_documents
 from ._tree import (
     BlobStore,
@@ -28,7 +30,6 @@ from ._tree import (
 )
 
 _SHA_MEDIA = "application/vnd.github.sha"
-_REPO_RE = re.compile(r"^[\w.-]+/[\w.-]+$")
 _BLOB_CONCURRENCY = 8
 
 
@@ -88,9 +89,7 @@ class GitHubRepositoryLoader(BaseLoader):
         client: GitHubClient | None = None,
         async_client: AsyncGitHubClient | None = None,
     ) -> None:
-        if not _REPO_RE.match(repo):
-            raise ValueError(f"repo must look like 'owner/name', got {repo!r}")
-        self.repo = repo
+        self.repo = normalize_repo(repo)
         self.ref = ref
         self.split = split
         self.blob_fetch_threshold = blob_fetch_threshold
@@ -136,7 +135,17 @@ class GitHubRepositoryLoader(BaseLoader):
         nodes = tree["tree"]
         if tree.get("truncated"):
             nodes = self._walk_truncated(sha)
-        return RepoSnapshot(self.repo, ref, sha, tuple(select_entries(nodes, self._filter)))
+        return self._snapshot_of(ref, sha, nodes)
+
+    def _snapshot_of(self, ref: str, sha: str, nodes: list[dict[str, Any]]) -> RepoSnapshot:
+        entries = tuple(select_entries(nodes, self._filter))
+        if not entries and nodes:
+            warnings.warn(
+                f"No files in {self.repo}@{ref} passed your include/exclude/extensions/"
+                f"max_file_size filters, so there is nothing to search.",
+                stacklevel=3,
+            )
+        return RepoSnapshot(self.repo, ref, sha, entries)
 
     async def asnapshot(self) -> RepoSnapshot:
         c = self.async_client
@@ -156,7 +165,7 @@ class GitHubRepositoryLoader(BaseLoader):
         nodes = tree["tree"]
         if tree.get("truncated"):
             nodes = await self._awalk_truncated(sha)
-        return RepoSnapshot(self.repo, ref, sha, tuple(select_entries(nodes, self._filter)))
+        return self._snapshot_of(ref, sha, nodes)
 
     @staticmethod
     def _sha_or_none(ref: str) -> str | None:
@@ -304,8 +313,7 @@ class GitHubIssuesLoader(BaseLoader):
         base_url: str = DEFAULT_BASE_URL,
         client: GitHubClient | None = None,
     ) -> None:
-        if not _REPO_RE.match(repo):
-            raise ValueError(f"repo must look like 'owner/name', got {repo!r}")
+        repo = normalize_repo(repo)
         if state not in {"all", "open", "closed"}:
             raise ValueError("state must be 'all', 'open' or 'closed'")
         self.repo = repo

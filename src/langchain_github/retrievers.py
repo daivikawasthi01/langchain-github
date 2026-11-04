@@ -14,7 +14,7 @@ from langchain_core.callbacks import (
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.retrievers import BaseRetriever
-from pydantic import ConfigDict, Field, PrivateAttr, SecretStr
+from pydantic import ConfigDict, Field, PrivateAttr, SecretStr, field_validator
 
 from ._client import DEFAULT_BASE_URL, GitHubClient, GitHubError
 from ._index import (
@@ -26,6 +26,7 @@ from ._index import (
     issue_embed_text,
 )
 from ._query import normalize, search_variants
+from ._repo import normalize_repo
 from ._threads import (
     Thread,
     count_threads,
@@ -37,6 +38,14 @@ from ._threads import (
     thread_documents,
 )
 from .loaders import GitHubRepositoryLoader, RepoSnapshot
+
+
+def _resolve_k(k: int | None, default: int) -> int:
+    if k is None:
+        return default
+    if k < 1:
+        raise ValueError(f"k must be at least 1, got {k}")
+    return k
 
 
 class GitHubRepoRetriever(BaseRetriever):
@@ -54,13 +63,13 @@ class GitHubRepoRetriever(BaseRetriever):
         >>> retriever.invoke("how are environment variables read for options?")
     """
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
     repo: str
-    """``"owner/name"``."""
+    """``"owner/name"``. A GitHub URL or ``owner/name.git`` is also accepted."""
     ref: str | None = None
     """Branch, tag or commit. Defaults to the repository's default branch."""
-    k: int = 5
+    k: int = Field(default=5, ge=1)
     """Number of passages to return."""
     token: SecretStr | None = None
     """GitHub token; falls back to ``GITHUB_TOKEN``, ``GH_TOKEN``, then ``gh auth login``."""
@@ -78,14 +87,41 @@ class GitHubRepoRetriever(BaseRetriever):
     loader_options: dict[str, Any] = Field(default_factory=dict)
 
     _loader: GitHubRepositoryLoader | None = PrivateAttr(default=None)
+    _loader_key: tuple[Any, ...] | None = PrivateAttr(default=None)
     _index: ChunkIndex | None = PrivateAttr(default=None)
     _indexed_sha: str | None = PrivateAttr(default=None)
     _vector_cache: dict[tuple[str, int, int], list[float]] = PrivateAttr(default_factory=dict)
     _lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
 
+    @field_validator("repo")
+    @classmethod
+    def _check_repo(cls, value: str) -> str:
+        return normalize_repo(value)
+
+    def _config_key(self) -> tuple[Any, ...]:
+        """Everything the loader is built from, so changing an option after use takes effect."""
+        return (
+            self.repo,
+            self.ref,
+            self.token.get_secret_value() if self.token else None,
+            repr(self.include),
+            repr(self.exclude),
+            repr(self.extensions),
+            self.max_file_size,
+            self.chunk_size,
+            self.chunk_overlap,
+            self.cache_dir,
+            self.base_url,
+            repr(self.loader_options),
+        )
+
     @property
     def loader(self) -> GitHubRepositoryLoader:
+        key = self._config_key()
+        if self._loader is not None and key != self._loader_key:
+            self._loader, self._index, self._indexed_sha = None, None, None
         if self._loader is None:
+            self._loader_key = key
             self._loader = GitHubRepositoryLoader(
                 self.repo,
                 ref=self.ref,
@@ -162,7 +198,7 @@ class GitHubRepoRetriever(BaseRetriever):
         self, query: str, k: int | None, query_vector: list[float] | None
     ) -> list[Document]:
         assert self._index is not None
-        return self._index.search(query, k or self.k, query_vector)
+        return self._index.search(query, _resolve_k(k, self.k), query_vector)
 
     # -- BaseRetriever API ------------------------------------------------------------------------
 
@@ -203,10 +239,11 @@ class GitHubIssuesRetriever(BaseRetriever):
     ``"auto"`` (default) counts the repository's issues once and picks.
     """
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
     repo: str
-    k: int = 5
+    """``"owner/name"``. A GitHub URL or ``owner/name.git`` is also accepted."""
+    k: int = Field(default=5, ge=1)
     token: SecretStr | None = None
     mode: Literal["auto", "index", "search"] = "auto"
     max_index_threads: int = 1500
@@ -225,6 +262,11 @@ class GitHubIssuesRetriever(BaseRetriever):
     _stamp: str = PrivateAttr(default="")
     _built_at: float = PrivateAttr(default=0.0)
     _lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
+
+    @field_validator("repo")
+    @classmethod
+    def _check_repo(cls, value: str) -> str:
+        return normalize_repo(value)
 
     @property
     def client(self) -> GitHubClient:
@@ -288,7 +330,7 @@ class GitHubIssuesRetriever(BaseRetriever):
 
     def _run(self, query: str, k: int | None) -> list[Document]:
         with self._lock:
-            k = k or self.k
+            k = _resolve_k(k, self.k)
             if self._decide() == "search":
                 return self._search_mode(query, k)
             self._refresh_index()

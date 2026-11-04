@@ -77,8 +77,9 @@ def _glob_regex(pattern: str) -> re.Pattern[str]:
 class PathFilter:
     """Include/exclude globs, extension allow-list and size cap for repository files.
 
-    A pattern without a slash (``*.md``) matches at any depth, like a ``.gitignore`` line. A
-    pattern ending in ``/`` matches a directory at any depth.
+    A pattern without a slash (``*.md``, ``docs``) matches a file or directory name at any depth,
+    like a ``.gitignore`` line. A pattern ending in ``/`` matches a directory at any depth. A
+    pattern naming a directory (``docs`` or ``src/click``) selects everything under it.
     """
 
     def __init__(
@@ -108,7 +109,10 @@ class PathFilter:
     @staticmethod
     def _hit(rule: tuple[re.Pattern[str], bool], path: str) -> bool:
         regex, anywhere = rule
-        return bool(regex.match(path) or (anywhere and regex.match(path.rsplit("/", 1)[-1])))
+        parts = path.split("/")
+        if anywhere:
+            return any(regex.match(part) for part in parts)
+        return any(regex.match("/".join(parts[: i + 1])) for i in range(len(parts)))
 
     def accepts(self, entry: TreeEntry) -> bool:
         suffix = Path(entry.path).suffix.lower()
