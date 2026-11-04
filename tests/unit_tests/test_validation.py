@@ -1,4 +1,5 @@
 import pytest
+import respx
 from pydantic import ValidationError
 
 from langchain_github import GitHubIssuesRetriever, GitHubRepoRetriever
@@ -77,3 +78,44 @@ def test_changing_an_option_after_first_use_takes_effect():
         assert any(d.metadata["path"] == "src/http/retry.py" for d in r.invoke("retry limit"))
         r.include = ["docs/**"]
         assert {d.metadata["path"] for d in r.invoke("retry limit")} == {"docs/config.md"}
+
+
+def test_unknown_ref_says_so_instead_of_a_bare_422():
+    import httpx
+
+    from langchain_github import GitHubNotFoundError
+
+    repo, router = build()
+    router.get("https://api.github.com/repos/acme/demo/commits/nope").mock(
+        return_value=httpx.Response(422, json={"message": "No commit found for SHA: nope"})
+    )
+    with router:
+        r = GitHubRepoRetriever(repo="acme/demo", ref="nope", token="t")
+        with pytest.raises(GitHubNotFoundError, match="no branch, tag or commit named 'nope'"):
+            r.invoke("retry")
+
+
+def test_issue_search_translates_a_missing_repo_and_surfaces_rate_limits():
+    import httpx
+
+    from langchain_github import GitHubClient, GitHubNotFoundError, GitHubRateLimitError
+    from langchain_github._threads import count_threads, search_candidates
+
+    with respx.mock() as router:
+        router.get("https://api.github.com/search/issues").mock(
+            return_value=httpx.Response(422, json={"message": "Validation Failed"})
+        )
+        client = GitHubClient("t", sleep=lambda s: None)
+        with pytest.raises(GitHubNotFoundError, match="not found, or is private"):
+            count_threads(client, "a/b")
+        assert search_candidates(client, "a/b", [("hybrid", "x"), ("lexical", "y")]) == []
+
+    with respx.mock() as router:
+        router.get("https://api.github.com/search/issues").mock(
+            return_value=httpx.Response(
+                403, headers={"retry-after": "900"}, json={"message": "rate limit"}
+            )
+        )
+        client = GitHubClient("t", sleep=lambda s: None)
+        with pytest.raises(GitHubRateLimitError):
+            search_candidates(client, "a/b", [("hybrid", "x")])

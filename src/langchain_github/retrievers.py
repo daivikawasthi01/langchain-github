@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import threading
 import time
+import warnings
 from typing import Any, Literal
 
 from langchain_core.callbacks import (
@@ -16,7 +17,7 @@ from langchain_core.embeddings import Embeddings
 from langchain_core.retrievers import BaseRetriever
 from pydantic import ConfigDict, Field, PrivateAttr, SecretStr, field_validator
 
-from ._client import DEFAULT_BASE_URL, GitHubClient, GitHubError
+from ._client import DEFAULT_BASE_URL, GitHubClient, GitHubNotFoundError
 from ._index import (
     ChunkIndex,
     ThreadIndex,
@@ -303,6 +304,12 @@ class GitHubIssuesRetriever(BaseRetriever):
         threads = fetch_all_issues(self.client, self.repo, max_threads=self.max_index_threads)
         if self.include_discussions:
             threads.extend(fetch_discussions(self.client, self.repo))
+        if not threads:
+            warnings.warn(
+                f"{self.repo} has no issues or discussions to search (issues may be turned off "
+                "for this repository).",
+                stacklevel=3,
+            )
         self._index = self._build(threads)
         self._stamp, self._built_at = stamp, time.monotonic()
 
@@ -313,7 +320,7 @@ class GitHubIssuesRetriever(BaseRetriever):
         for n in numbers[: self.max_candidates]:
             try:
                 t = fetch_one_issue(self.client, self.repo, n)
-            except GitHubError:
+            except GitHubNotFoundError:  # deleted or transferred since the search
                 continue
             if t is not None:
                 threads.append(t)

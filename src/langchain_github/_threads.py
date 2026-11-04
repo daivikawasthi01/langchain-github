@@ -9,7 +9,7 @@ from typing import Any
 
 from langchain_core.documents import Document
 
-from ._client import GitHubClient, GitHubError
+from ._client import GitHubClient, GitHubError, GitHubGraphQLError, GitHubNotFoundError
 
 _CLOSES = re.compile(
     r"\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s*:?\s+(?:[\w.-]+/[\w.-]+)?#(\d+)", re.I
@@ -139,9 +139,17 @@ def probe(client: GitHubClient, repo: str) -> str:
 
 
 def count_threads(client: GitHubClient, repo: str) -> int:
-    body = client.get_json(
-        "/search/issues", {"q": f"repo:{repo} is:issue", "per_page": 1}, resource="search"
-    )
+    try:
+        body = client.get_json(
+            "/search/issues", {"q": f"repo:{repo} is:issue", "per_page": 1}, resource="search"
+        )
+    except GitHubError as exc:
+        if exc.status_code == 422:  # search says this for a repo it cannot see
+            raise GitHubNotFoundError(
+                f"Repository {repo} was not found, or is private. Check the spelling; for a "
+                "private repository sign in with `gh auth login` or set GITHUB_TOKEN."
+            ).with_status(404) from exc
+        raise
     return int(body.get("total_count", 0))
 
 
@@ -167,6 +175,8 @@ def fetch_all_issues(
         )
         if "pull_request" not in i
     ][:max_threads]
+    if not issues:
+        return []
     by_number: dict[int, list[dict[str, Any]]] = {}
     wanted = {i["number"] for i in issues}
     for c in client.paginate(f"/repos/{repo}/issues/comments", max_items=max_threads * 40):
@@ -181,6 +191,19 @@ def fetch_all_issues(
 
 
 def fetch_discussions(client: GitHubClient, repo: str, limit: int = 500) -> list[Thread]:
+    """All discussions, or none (with a warning) if they cannot be read.
+
+    GitHub serves discussions only through GraphQL, which needs a signed-in user. Rate-limit and
+    credential errors are raised; only GraphQL-level refusals (such as discussions being switched
+    off for the repository) are turned into a warning.
+    """
+    if not client.core.authenticated:
+        warnings.warn(
+            "Discussions were skipped because you are not signed in to GitHub. "
+            "Run `gh auth login` or set GITHUB_TOKEN to include them.",
+            stacklevel=2,
+        )
+        return []
     owner, name = repo.split("/", 1)
     out: list[Thread] = []
     after: str | None = None
@@ -194,16 +217,8 @@ def fetch_discussions(client: GitHubClient, repo: str, limit: int = 500) -> list
             if not page["pageInfo"]["hasNextPage"]:
                 break
             after = page["pageInfo"]["endCursor"]
-    except GitHubError:
-        # Discussions disabled or no access: issues still work. GraphQL needs a signed-in user,
-        # so say so rather than silently returning only issues.
-        if not client.core.authenticated:
-            warnings.warn(
-                "Discussions were skipped because you are not signed in to GitHub. "
-                "Run `gh auth login` or set GITHUB_TOKEN to include them.",
-                stacklevel=2,
-            )
-        return out
+    except GitHubGraphQLError as exc:
+        warnings.warn(f"Discussions of {repo} were skipped: {exc}", stacklevel=2)
     return out
 
 
@@ -234,8 +249,10 @@ def search_candidates(
             params["search_type"] = search_type
         try:
             body = client.get_json("/search/issues", params, resource="search")
-        except GitHubError:
-            continue
+        except GitHubError as exc:
+            if exc.status_code == 422:  # this query form was rejected; try the next variant
+                continue
+            raise
         for item in body.get("items", []):
             seen.setdefault(item["number"], None)
     return list(seen)

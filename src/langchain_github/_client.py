@@ -34,7 +34,17 @@ _LOCAL_LIMITS: dict[str, list[tuple[int, float]]] = {
 
 
 class GitHubError(Exception):
-    """Base error for GitHub API failures."""
+    """Base error for GitHub API failures. ``status_code`` is the HTTP status, if there was one."""
+
+    status_code: int | None = None
+
+    def with_status(self, status: int) -> GitHubError:
+        self.status_code = status
+        return self
+
+
+class GitHubGraphQLError(GitHubError):
+    """GitHub answered a GraphQL request with an ``errors`` list."""
 
 
 class GitHubAuthError(GitHubError):
@@ -187,23 +197,31 @@ class _Core:
         if status == 401:
             raise GitHubAuthError(
                 "Bad credentials (401). Check your GitHub token, or run `gh auth login` again."
-            )
+            ).with_status(401)
         if status == 404:
-            raise GitHubNotFoundError(f"Not found: {resp.request.url.path}")
+            raise GitHubNotFoundError(
+                f"Not found: {resp.request.url.path}. "
+                + (
+                    "Check the spelling. If it is a private repository, sign in with "
+                    "`gh auth login` (or set GITHUB_TOKEN) so GitHub can show it to you."
+                    if not self.authenticated
+                    else "Check the spelling, and that your token is allowed to read it."
+                )
+            ).with_status(404)
         if status in (403, 429):
             wait = self._rate_limit_wait(resp)
             if wait is None:
-                raise GitHubAuthError(f"Forbidden (403): {self._message(resp)}")
+                raise GitHubAuthError(f"Forbidden (403): {self._message(resp)}").with_status(403)
             if wait > self.max_wait or attempt >= self.max_retries:
                 raise GitHubRateLimitError(
                     f"Rate limited; would need to wait {wait:.0f}s ({self._message(resp)})."
                     + ("" if self.authenticated else _NO_TOKEN_HINT),
                     wait,
-                )
+                ).with_status(status)
             return wait
         if status >= 500 and attempt < self.max_retries:
             return min(2.0**attempt + random.random(), self.max_wait)
-        raise GitHubError(f"GitHub returned {status}: {self._message(resp)}")
+        raise GitHubError(f"GitHub returned {status}: {self._message(resp)}").with_status(status)
 
     def transport_retry(self, exc: httpx.TransportError, attempt: int) -> float:
         """Seconds to wait after a dropped or timed-out connection; raises once retries run out."""
@@ -230,10 +248,36 @@ class _Core:
         except Exception:
             return resp.text[:200]
 
+    @staticmethod
+    def check_declared_size(resp: httpx.Response, max_bytes: int | None) -> None:
+        declared = int(resp.headers.get("content-length", 0))
+        if max_bytes and declared > max_bytes:
+            raise GitHubError(
+                f"Archive is {declared / 1e6:.0f} MB, above max_archive_mb "
+                f"({max_bytes / 1e6:.0f} MB). Narrow the filters or raise the limit."
+            )
+
+    @staticmethod
+    def check_streamed_size(size: int, max_bytes: int | None) -> None:
+        if max_bytes and size > max_bytes:
+            raise GitHubError("Archive exceeded max_archive_mb while downloading.")
+
+    @staticmethod
+    def json(resp: httpx.Response) -> Any:
+        """The body as JSON, or a ``GitHubError`` if it is not JSON (proxy, captive portal)."""
+        try:
+            return resp.json()
+        except ValueError as exc:
+            raise GitHubError(
+                f"GitHub returned a response that is not JSON (HTTP {resp.status_code}). "
+                "A proxy, VPN or captive portal may be in the way. "
+                f"Start of the reply: {resp.text[:80]!r}"
+            ) from exc
+
     def parse(self, resp: httpx.Response, key: str, etag: bool) -> Any:
         if resp.status_code == 304:
             return self.etags[key][1]
-        data = resp.json()
+        data = self.json(resp)
         if etag and "etag" in resp.headers:
             self.etags[key] = (resp.headers["etag"], data)
         return data
@@ -268,7 +312,7 @@ class GitHubClient:
         sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         self._core = _Core(token, base_url, max_retries, max_wait, user_agent)
-        self._http = http or httpx.Client(timeout=timeout)
+        self._http = http or httpx.Client(timeout=timeout, follow_redirects=True)
         self._sleep = sleep
 
     @property
@@ -357,7 +401,7 @@ class GitHubClient:
         seen = 0
         while url:
             resp, _ = self._send("GET", url, params=params, resource=resource)
-            body = resp.json()
+            body = self._core.json(resp)
             for item in body[items_key] if items_key else body:
                 yield item
                 seen += 1
@@ -369,37 +413,45 @@ class GitHubClient:
         resp, _ = self._send(
             "POST", "/graphql", json={"query": query, "variables": variables or {}}
         )
-        body = resp.json()
+        body = self._core.json(resp)
         if body.get("errors"):
-            raise GitHubError(f"GraphQL error: {body['errors'][0].get('message')}")
+            raise GitHubGraphQLError(f"GraphQL error: {body['errors'][0].get('message')}")
         return body["data"]  # type: ignore[no-any-return]
 
     def download(self, path: str, *, max_bytes: int | None = None) -> bytes:
-        """Download a (possibly redirected) binary resource such as a repository tarball."""
+        """Download a (possibly redirected) binary resource such as a repository tarball.
+
+        Rate limits, 5xx responses and dropped connections are retried like any other request.
+        """
         c = self._core
-        wait = c.limiter.reserve("core")
-        if wait:
-            self._sleep(wait)
-        with self._http.stream(
-            "GET",
-            c.url(path),
-            headers=c.headers("application/vnd.github+json", None),
-            follow_redirects=True,
-        ) as resp:
-            c.record(resp)
-            c.decide(resp, c.max_retries)
-            declared = int(resp.headers.get("content-length", 0))
-            if max_bytes and declared > max_bytes:
-                raise GitHubError(
-                    f"Archive is {declared / 1e6:.0f} MB, above max_archive_mb "
-                    f"({max_bytes / 1e6:.0f} MB). Narrow the filters or raise the limit."
-                )
-            buf = bytearray()
-            for chunk in resp.iter_bytes():
-                buf.extend(chunk)
-                if max_bytes and len(buf) > max_bytes:
-                    raise GitHubError("Archive exceeded max_archive_mb while downloading.")
-            return bytes(buf)
+        attempt = 0
+        while True:
+            wait = c.limiter.reserve("core")
+            if wait > c.max_wait:
+                raise GitHubRateLimitError(f"Local core limit: wait {wait:.0f}s", wait)
+            if wait:
+                self._sleep(wait)
+            try:
+                with self._http.stream(
+                    "GET", c.url(path), headers=c.headers("application/vnd.github+json", None)
+                ) as resp:
+                    c.record(resp)
+                    if resp.status_code >= 400:
+                        resp.read()
+                    retry = c.decide(resp, attempt)
+                    if retry is None:
+                        c.check_declared_size(resp, max_bytes)
+                        buf = bytearray()
+                        for chunk in resp.iter_bytes():
+                            buf.extend(chunk)
+                            c.check_streamed_size(len(buf), max_bytes)
+                        return bytes(buf)
+            except httpx.TransportError as exc:
+                self._sleep(c.transport_retry(exc, attempt))
+                attempt += 1
+                continue
+            self._sleep(retry)
+            attempt += 1
 
 
 class AsyncGitHubClient:
@@ -418,7 +470,7 @@ class AsyncGitHubClient:
         sleep: Callable[[float], Any] = asyncio.sleep,
     ) -> None:
         self._core = _Core(token, base_url, max_retries, max_wait, user_agent)
-        self._http = http or httpx.AsyncClient(timeout=timeout)
+        self._http = http or httpx.AsyncClient(timeout=timeout, follow_redirects=True)
         self._sleep = sleep
 
     @property
@@ -507,7 +559,7 @@ class AsyncGitHubClient:
         seen = 0
         while url:
             resp, _ = await self._send("GET", url, params=params, resource=resource)
-            body = resp.json()
+            body = self._core.json(resp)
             for item in body[items_key] if items_key else body:
                 yield item
                 seen += 1
@@ -519,33 +571,38 @@ class AsyncGitHubClient:
         resp, _ = await self._send(
             "POST", "/graphql", json={"query": query, "variables": variables or {}}
         )
-        body = resp.json()
+        body = self._core.json(resp)
         if body.get("errors"):
-            raise GitHubError(f"GraphQL error: {body['errors'][0].get('message')}")
+            raise GitHubGraphQLError(f"GraphQL error: {body['errors'][0].get('message')}")
         return body["data"]  # type: ignore[no-any-return]
 
     async def download(self, path: str, *, max_bytes: int | None = None) -> bytes:
         c = self._core
-        wait = c.limiter.reserve("core")
-        if wait:
-            await self._sleep(wait)
-        async with self._http.stream(
-            "GET",
-            c.url(path),
-            headers=c.headers("application/vnd.github+json", None),
-            follow_redirects=True,
-        ) as resp:
-            c.record(resp)
-            c.decide(resp, c.max_retries)
-            declared = int(resp.headers.get("content-length", 0))
-            if max_bytes and declared > max_bytes:
-                raise GitHubError(
-                    f"Archive is {declared / 1e6:.0f} MB, above max_archive_mb "
-                    f"({max_bytes / 1e6:.0f} MB). Narrow the filters or raise the limit."
-                )
-            buf = bytearray()
-            async for chunk in resp.aiter_bytes():
-                buf.extend(chunk)
-                if max_bytes and len(buf) > max_bytes:
-                    raise GitHubError("Archive exceeded max_archive_mb while downloading.")
-            return bytes(buf)
+        attempt = 0
+        while True:
+            wait = c.limiter.reserve("core")
+            if wait > c.max_wait:
+                raise GitHubRateLimitError(f"Local core limit: wait {wait:.0f}s", wait)
+            if wait:
+                await self._sleep(wait)
+            try:
+                async with self._http.stream(
+                    "GET", c.url(path), headers=c.headers("application/vnd.github+json", None)
+                ) as resp:
+                    c.record(resp)
+                    if resp.status_code >= 400:
+                        await resp.aread()
+                    retry = c.decide(resp, attempt)
+                    if retry is None:
+                        c.check_declared_size(resp, max_bytes)
+                        buf = bytearray()
+                        async for chunk in resp.aiter_bytes():
+                            buf.extend(chunk)
+                            c.check_streamed_size(len(buf), max_bytes)
+                        return bytes(buf)
+            except httpx.TransportError as exc:
+                await self._sleep(c.transport_retry(exc, attempt))
+                attempt += 1
+                continue
+            await self._sleep(retry)
+            attempt += 1

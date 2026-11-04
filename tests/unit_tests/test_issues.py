@@ -291,19 +291,36 @@ async def test_loader_async(fake):
     assert docs
 
 
-def test_signed_out_user_is_told_discussions_were_skipped():
-    import warnings
+def _discussion_client(signed_in, graphql):
     from types import SimpleNamespace
 
-    from langchain_github._client import GitHubError
+    return SimpleNamespace(core=SimpleNamespace(authenticated=signed_in), graphql=graphql)
+
+
+def test_signed_out_user_is_told_discussions_were_skipped_without_calling_graphql():
     from langchain_github._threads import fetch_discussions
 
-    def boom(*a, **k):
-        raise GitHubError("needs auth")
+    calls = []
+    client = _discussion_client(False, lambda *a, **k: calls.append(1))
+    with pytest.warns(UserWarning, match="gh auth login"):
+        assert fetch_discussions(client, "o/r") == []
+    assert calls == []
 
-    for signed_in, expect_warning in ((False, True), (True, False)):
-        client = SimpleNamespace(core=SimpleNamespace(authenticated=signed_in), graphql=boom)
-        with warnings.catch_warnings(record=True) as caught:
-            warnings.simplefilter("always")
-            assert fetch_discussions(client, "o/r") == []  # type: ignore[arg-type]
-        assert any("not signed in" in str(w.message) for w in caught) is expect_warning
+
+def test_graphql_refusal_is_a_warning_but_rate_limits_and_bad_credentials_are_raised():
+    from langchain_github._client import GitHubAuthError, GitHubGraphQLError, GitHubRateLimitError
+    from langchain_github._threads import fetch_discussions
+
+    def refuse(*a, **k):
+        raise GitHubGraphQLError("Could not resolve to a Repository")
+
+    with pytest.warns(UserWarning, match="Could not resolve"):
+        assert fetch_discussions(_discussion_client(True, refuse), "o/r") == []
+
+    for exc in (GitHubRateLimitError("slow down", 500), GitHubAuthError("bad token")):
+
+        def boom(*a, exc=exc, **k):
+            raise exc
+
+        with pytest.raises(type(exc)):
+            fetch_discussions(_discussion_client(True, boom), "o/r")

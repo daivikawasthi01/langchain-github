@@ -16,7 +16,13 @@ from langchain_core.documents import Document
 from pydantic import SecretStr
 
 from ._chunk import Chunker, language_for
-from ._client import DEFAULT_BASE_URL, AsyncGitHubClient, GitHubClient
+from ._client import (
+    DEFAULT_BASE_URL,
+    AsyncGitHubClient,
+    GitHubClient,
+    GitHubError,
+    GitHubNotFoundError,
+)
 from ._repo import normalize_repo
 from ._threads import Thread, fetch_all_issues, fetch_discussions, thread_documents
 from ._tree import (
@@ -125,12 +131,15 @@ class GitHubRepositoryLoader(BaseLoader):
         ref = self.ref or self._default_branch
         if ref is None:
             ref = self._default_branch = c.get_json(f"/repos/{self.repo}")["default_branch"]
-        sha = (
-            self._sha_or_none(ref)
-            or c.get_text(
-                f"/repos/{self.repo}/commits/{quote(ref, safe='/')}", accept=_SHA_MEDIA
-            ).strip()
-        )
+        try:
+            sha = (
+                self._sha_or_none(ref)
+                or c.get_text(
+                    f"/repos/{self.repo}/commits/{quote(ref, safe='/')}", accept=_SHA_MEDIA
+                ).strip()
+            )
+        except GitHubError as exc:
+            raise self._ref_error(ref, exc) from exc
         tree = c.get_json(f"/repos/{self.repo}/git/trees/{sha}", {"recursive": "1"})
         nodes = tree["tree"]
         if tree.get("truncated"):
@@ -153,19 +162,31 @@ class GitHubRepositoryLoader(BaseLoader):
         if ref is None:
             info = await c.get_json(f"/repos/{self.repo}")
             ref = self._default_branch = info["default_branch"]
-        sha = (
-            self._sha_or_none(ref)
-            or (
-                await c.get_text(
-                    f"/repos/{self.repo}/commits/{quote(ref, safe='/')}", accept=_SHA_MEDIA
-                )
-            ).strip()
-        )
+        try:
+            sha = (
+                self._sha_or_none(ref)
+                or (
+                    await c.get_text(
+                        f"/repos/{self.repo}/commits/{quote(ref, safe='/')}", accept=_SHA_MEDIA
+                    )
+                ).strip()
+            )
+        except GitHubError as exc:
+            raise self._ref_error(ref, exc) from exc
         tree = await c.get_json(f"/repos/{self.repo}/git/trees/{sha}", {"recursive": "1"})
         nodes = tree["tree"]
         if tree.get("truncated"):
             nodes = await self._awalk_truncated(sha)
         return self._snapshot_of(ref, sha, nodes)
+
+    def _ref_error(self, ref: str, exc: GitHubError) -> GitHubError:
+        """GitHub answers an unknown branch/tag/commit with a bare 422; say what it means."""
+        if exc.status_code == 422:
+            return GitHubNotFoundError(
+                f"{self.repo} has no branch, tag or commit named {ref!r}. "
+                "Pass an existing name or a full or short commit SHA as ref=."
+            ).with_status(422)
+        return exc
 
     @staticmethod
     def _sha_or_none(ref: str) -> str | None:

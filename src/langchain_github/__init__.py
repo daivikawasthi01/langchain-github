@@ -3,6 +3,7 @@ from ._client import (
     GitHubAuthError,
     GitHubClient,
     GitHubError,
+    GitHubGraphQLError,
     GitHubNotFoundError,
     GitHubRateLimitError,
 )
@@ -16,6 +17,7 @@ __all__ = [
     "GitHubAuthError",
     "GitHubClient",
     "GitHubError",
+    "GitHubGraphQLError",
     "GitHubNotFoundError",
     "GitHubRateLimitError",
     "GitHubIssuesLoader",

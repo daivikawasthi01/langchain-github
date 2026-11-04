@@ -270,3 +270,70 @@ def test_gh_cli_token_handles_missing_and_logged_out(monkeypatch):
     failed = subprocess.CompletedProcess([], 1, stdout="", stderr="not logged in")
     monkeypatch.setattr(_client.subprocess, "run", lambda *a, **k: failed)
     assert _client._gh_cli_token() is None
+
+
+@respx.mock
+def test_download_retries_a_5xx_then_succeeds():
+    route = respx.get(f"{API}/repos/o/r/tarball/abc")
+    route.side_effect = [
+        httpx.Response(502, text="bad gateway"),
+        httpx.Response(200, content=b"ok"),
+    ]
+    client, slept = make_client()
+    assert client.download("/repos/o/r/tarball/abc") == b"ok"
+    assert len(slept) == 1
+
+
+@respx.mock
+def test_download_retries_dropped_connections_then_wraps_the_error():
+    respx.get(f"{API}/repos/o/r/tarball/abc").mock(side_effect=httpx.ConnectError("boom"))
+    client, _ = make_client(max_retries=2)
+    with pytest.raises(GitHubError, match="Could not reach GitHub"):
+        client.download("/repos/o/r/tarball/abc")
+
+
+@respx.mock
+def test_download_error_responses_do_not_crash_on_unread_body():
+    respx.get(f"{API}/repos/o/r/tarball/abc").mock(
+        return_value=httpx.Response(404, json={"message": "Not Found"})
+    )
+    client, _ = make_client()
+    with pytest.raises(GitHubNotFoundError):
+        client.download("/repos/o/r/tarball/abc")
+
+
+@respx.mock
+def test_non_json_success_response_is_a_github_error():
+    respx.get(f"{API}/x").mock(
+        return_value=httpx.Response(200, text="<html>Sign in to WiFi</html>")
+    )
+    client, _ = make_client()
+    with pytest.raises(GitHubError, match="not JSON"):
+        client.get_json("/x")
+
+
+@respx.mock
+def test_errors_carry_the_status_code_and_not_found_explains_private_repos():
+    respx.get(f"{API}/a").mock(return_value=httpx.Response(404, json={"message": "Not Found"}))
+    respx.get(f"{API}/b").mock(return_value=httpx.Response(418, json={"message": "teapot"}))
+    anon = GitHubClient(sleep=lambda s: None, http=httpx.Client())
+    anon.core._headers.pop("Authorization", None)
+    with pytest.raises(GitHubNotFoundError, match="gh auth login") as e:
+        anon.get_json("/a")
+    assert e.value.status_code == 404
+    client, _ = make_client()
+    with pytest.raises(GitHubError) as e2:
+        client.get_json("/b")
+    assert e2.value.status_code == 418
+
+
+@respx.mock
+def test_renamed_repository_redirect_is_followed():
+    respx.get(f"{API}/repos/old/name").mock(
+        return_value=httpx.Response(301, headers={"location": f"{API}/repositories/1"})
+    )
+    respx.get(f"{API}/repositories/1").mock(
+        return_value=httpx.Response(200, json={"default_branch": "main"})
+    )
+    client = GitHubClient("tok", sleep=lambda s: None)
+    assert client.get_json("/repos/old/name") == {"default_branch": "main"}
