@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import warnings
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -194,7 +195,15 @@ def fetch_discussions(client: GitHubClient, repo: str, limit: int = 500) -> list
                 break
             after = page["pageInfo"]["endCursor"]
     except GitHubError:
-        return out  # discussions disabled or token lacks access: issues still work
+        # Discussions disabled or no access: issues still work. GraphQL needs a signed-in user,
+        # so say so rather than silently returning only issues.
+        if not client.core.authenticated:
+            warnings.warn(
+                "Discussions were skipped because you are not signed in to GitHub. "
+                "Run `gh auth login` or set GITHUB_TOKEN to include them.",
+                stacklevel=2,
+            )
+        return out
     return out
 
 

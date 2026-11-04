@@ -289,3 +289,21 @@ def test_loader_validates_arguments():
 async def test_loader_async(fake):
     docs = [d async for d in GitHubIssuesLoader(REPO, token="t").alazy_load()]
     assert docs
+
+
+def test_signed_out_user_is_told_discussions_were_skipped():
+    import warnings
+    from types import SimpleNamespace
+
+    from langchain_github._client import GitHubError
+    from langchain_github._threads import fetch_discussions
+
+    def boom(*a, **k):
+        raise GitHubError("needs auth")
+
+    for signed_in, expect_warning in ((False, True), (True, False)):
+        client = SimpleNamespace(core=SimpleNamespace(authenticated=signed_in), graphql=boom)
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            assert fetch_discussions(client, "o/r") == []  # type: ignore[arg-type]
+        assert any("not signed in" in str(w.message) for w in caught) is expect_warning

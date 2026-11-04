@@ -69,7 +69,7 @@ print(chain.invoke("how are environment variables read for options?"))
 | `include` / `exclude` / `extensions` | Filter files with gitignore-style globs. | `GitHubRepoRetriever(repo="pallets/click", include=["docs/**"], extensions=[".md"])` | Only searches Markdown files under `docs/`, so code and tests never show up in results. |
 | `mode=` | Issues retriever: `index`, `search` or `auto` (default). | `GitHubIssuesRetriever(repo="pallets/click", mode="search")` | Asks GitHub's own search for candidate issues instead of downloading every issue first. |
 
-Requests stay within GitHub's limits: 60 per hour when you are not signed in and 5,000 per hour when you are. Searches are paced at 30 per minute, and meaning-based (hybrid) issue searches at 10 per minute. If GitHub asks to slow down, the package waits and retries.
+Requests stay within GitHub's limits: 60 per hour when you are not signed in and 5,000 per hour when you are (run `gh auth login` once to sign in). Searches are paced at 30 per minute, and meaning-based (hybrid) issue searches at 10 per minute. If GitHub asks to slow down, the package waits and retries.
 
 `embeddings=` takes an object, not a string. This free one runs on your machine (`pip install fastembed`), and any other LangChain embeddings class, such as `OpenAIEmbeddings()`, works the same way:
 
@@ -97,6 +97,7 @@ The first query builds the index, which takes a couple of minutes on a laptop fo
 ## Limits
 
 - Read-only. Private repositories need a token that can read them.
+- Discussions are only included when you are signed in, because GitHub does not serve them to anonymous users. Run `gh auth login` once to enable them.
 - GitHub search caps at 1,000 results. Very large monorepos are capped by `max_archive_mb`.
 - The index is held in memory per retriever instance.
 - Not an official GitHub product.
