@@ -67,7 +67,7 @@ print(chain.invoke("how are environment variables read for options?"))
 | `embeddings=` | Any LangChain `Embeddings`; turns on hybrid ranking. Recommended for natural-language questions. | `GitHubRepoRetriever(repo="pallets/click", embeddings=my_embeddings)` | Matches on meaning as well as words, so "env vars" also finds text about "environment variables". |
 | `cache_dir=` | Cache downloads so a new commit refetches only changed files. | `GitHubRepoRetriever(repo="pallets/click", cache_dir=".cache/gh")` | Saves downloaded files in `.cache/gh`. The next run reuses them and only fetches what changed. |
 | `include` / `exclude` / `extensions` | Filter files with gitignore-style globs. | `GitHubRepoRetriever(repo="pallets/click", include=["docs/**"], extensions=[".md"])` | Only searches Markdown files under `docs/`, so code and tests never show up in results. |
-| `mode=` | Issues retriever: `index`, `search` or `auto` (default). | `GitHubIssuesRetriever(repo="pallets/click", mode="search")` | Asks GitHub's own search for candidate issues instead of downloading them all. Faster to start on big repos. |
+| `mode=` | Issues retriever: `index`, `search` or `auto` (default). | `GitHubIssuesRetriever(repo="pallets/click", mode="search")` | Asks GitHub's own search for candidate issues instead of downloading every issue first. |
 
 Requests are throttled to GitHub's documented limits, honour `Retry-After`, and raise `GitHubRateLimitError` rather than hang.
 
