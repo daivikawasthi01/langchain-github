@@ -7,3 +7,11 @@ build/
 .mypy_cache/
 .ruff_cache/
 .pytest_cache/
+
+# local notes and run logs
+PROGRESS.md
+docs/PUBLISHING.md
+eval/results/*.log
+eval/results/*.err
+.benchmarks/
+.DS_Store
