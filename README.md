@@ -2,9 +2,9 @@
 
 LangChain retrievers and loaders for GitHub repositories, issues and discussions.
 
-- **`GitHubRepoRetriever`**: ask a question about a repo and get the best code and doc passages, each with a permalink to the exact commit and lines. Works on any branch, tag or commit.
-- **`GitHubIssuesRetriever`**: describe a problem or paste a traceback and get the matching issue, discussion or comment, with how it was resolved (`fixed`, `answered`, `wontfix`, `duplicate`, `open`) and the PR that closed it.
-- **`GitHubRepositoryLoader`**, **`GitHubIssuesLoader`**: the same data as plain `Document`s.
+- **`GitHubRepoRetriever`**: ask a question about a repo and get the best code and doc passages, each with a permalink (a link that always points to the same version of the file) to the exact lines. Works on any branch, tag or commit (a branch or tag names a version of the code; a commit is one saved snapshot).
+- **`GitHubIssuesRetriever`**: describe a problem or paste a traceback (the error text Python prints when a program crashes) and get the matching issue, discussion or comment, with how it was resolved (`fixed`, `answered`, `wontfix` meaning the team chose not to change it, `duplicate` meaning it was reported before, or `open`) and the PR (pull request: a proposed code change) that closed it.
+- **`GitHubRepositoryLoader`**, **`GitHubIssuesLoader`**: the same data as plain `Document`s (LangChain's object holding some text plus details about where it came from).
 
 ## Installation
 
@@ -12,7 +12,7 @@ LangChain retrievers and loaders for GitHub repositories, issues and discussions
 pip install -U langchain-github
 ```
 
-No token is needed to try it, but without signing in GitHub allows only 60 requests an hour. To sign in once, install the [GitHub CLI](https://cli.github.com) and run:
+No token (a password-like key that identifies you to GitHub) is needed to try it, but without signing in GitHub allows only 60 requests an hour. To sign in once, install the [GitHub CLI](https://cli.github.com) (GitHub's command-line tool) and run:
 
 ```bash
 gh auth login
@@ -35,7 +35,7 @@ m = issues[0].metadata
 print(m["title"], m["resolution"], m["resolved_by_urls"], m["url"])
 ```
 
-Both retrievers support `ainvoke`, and `k` can be set on the retriever or per call.
+Both retrievers support `ainvoke` (the async version, which doesn't block your program while waiting), and `k` (how many results to return) can be set on the retriever or per call.
 
 ## Use with a chat model
 
@@ -64,24 +64,41 @@ print(chain.invoke("how are environment variables read for options?"))
 | Option | Effect | Example | What the example does |
 |---|---|---|---|
 | `ref=` | Branch, tag or commit (repo retriever). | `GitHubRepoRetriever(repo="pallets/click", ref="8.1.7")` | Searches the code as it was at release 8.1.7, not the latest version. Links point to that exact commit. |
-| `embeddings=` | Any LangChain `Embeddings`; turns on hybrid ranking. Recommended for natural-language questions. | `GitHubRepoRetriever(repo="pallets/click", embeddings=my_embeddings)` | Matches on meaning as well as words, so "env vars" also finds text about "environment variables". |
+| `embeddings=` | Any LangChain `Embeddings` (a model that turns text into numbers so meanings can be compared); turns on hybrid ranking (matches words and meaning together). Recommended for natural-language questions. | `GitHubRepoRetriever(repo="pallets/click", embeddings=Fast())` (`Fast` is defined below) | Matches on meaning as well as words, so "env vars" also finds text about "environment variables". |
 | `cache_dir=` | Cache downloads so a new commit refetches only changed files. | `GitHubRepoRetriever(repo="pallets/click", cache_dir=".cache/gh")` | Saves downloaded files in `.cache/gh`. The next run reuses them and only fetches what changed. |
-| `include` / `exclude` / `extensions` | Filter files with gitignore-style globs. | `GitHubRepoRetriever(repo="pallets/click", include=["docs/**"], extensions=[".md"])` | Only searches Markdown files under `docs/`, so code and tests never show up in results. |
+| `include` / `exclude` / `extensions` | Filter files with patterns like `docs/**` (the same style `.gitignore` uses). | `GitHubRepoRetriever(repo="pallets/click", include=["docs/**"], extensions=[".md"])` | Only searches Markdown files under `docs/`, so code and tests never show up in results. |
 | `mode=` | Issues retriever: `index`, `search` or `auto` (default). | `GitHubIssuesRetriever(repo="pallets/click", mode="search")` | Asks GitHub's own search for candidate issues instead of downloading every issue first. |
 
-Requests are throttled to GitHub's documented limits, honour `Retry-After`, and raise `GitHubRateLimitError` rather than hang.
+Requests stay within GitHub's limits: 60 per hour when you are not signed in and 5,000 per hour when you are. Searches are paced at 30 per minute, and meaning-based (hybrid) issue searches at 10 per minute. If GitHub asks to slow down, the package waits and retries.
+
+`embeddings=` takes an object, not a string. This free one runs on your machine (`pip install fastembed`), and any other LangChain embeddings class, such as `OpenAIEmbeddings()`, works the same way:
+
+```python
+from fastembed import TextEmbedding
+from langchain_core.embeddings import Embeddings
+
+class Fast(Embeddings):
+    def __init__(self):
+        self.model = TextEmbedding("BAAI/bge-small-en-v1.5")  # small model, downloaded once
+    def embed_documents(self, texts):
+        return [v.tolist() for v in self.model.embed(texts)]
+    def embed_query(self, text):
+        return next(iter(self.model.embed([text]))).tolist()
+```
+
+The first query builds the index, which takes a couple of minutes on a laptop for a repo like click. Later queries are fast.
 
 ## How well does it work?
 
-- **Repos:** finds the right passages noticeably better than plain keyword search, and about as well as a standard vector store, while also giving you exact line links, any branch or tag, and quick updates when the repo changes.
+- **Repos:** finds the right passages noticeably better than plain keyword search, and about as well as a standard vector store (a database that finds text by meaning), while also giving you exact line links, any branch or tag, and quick updates when the repo changes.
 - **Issues:** about as good as GitHub's own search at finding the right issue, and it adds what search does not: discussions, the closing pull request, and whether the problem was fixed, answered or closed as a duplicate.
 - **Wording matters:** by default it matches words, so it works best when your question uses the project's own terms. For casual or paraphrased questions, pass `embeddings=` so it also matches meaning.
 
 ## Limits
 
 - Read-only. Private repositories need a token that can read them.
-- GitHub search caps at 1,000 results. Very large monorepos are capped by `max_archive_mb`.
-- The index is held in memory per retriever instance.
+- GitHub search caps at 1,000 results. Very large monorepos (one repo holding many projects) are capped by `max_archive_mb`, the maximum download size.
+- The index (the searchable copy of the repo it builds) is kept in memory, one per retriever.
 - Not an official GitHub product.
 
 ## Development
