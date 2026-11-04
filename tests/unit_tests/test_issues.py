@@ -3,6 +3,7 @@ import respx
 from langchain_core.documents import Document
 
 from langchain_github import GitHubIssuesLoader, GitHubIssuesRetriever
+from langchain_github._client import _Core
 from langchain_github._index import ThreadIndex
 from langchain_github._query import keywords, normalize, search_variants
 from langchain_github._threads import (
@@ -24,9 +25,12 @@ acme.errors.PoolExhaustedError: no free connections at 0x7f3a
 """
 
 
-@pytest.fixture
-def fake():
+@pytest.fixture(params=["graphql", "rest"])
+def fake(request, monkeypatch):
+    """Every test using this runs twice: with the GraphQL fetch path and with REST only."""
+    monkeypatch.setattr(_Core, "graphql_issues", request.param == "graphql")
     f = FakeIssues()
+    f.path = request.param
     with respx.mock(assert_all_called=False) as router:
         f.mount(router)
         yield f

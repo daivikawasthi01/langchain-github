@@ -17,7 +17,7 @@ from langchain_core.embeddings import Embeddings
 from langchain_core.retrievers import BaseRetriever
 from pydantic import ConfigDict, Field, PrivateAttr, SecretStr, field_validator
 
-from ._client import DEFAULT_BASE_URL, GitHubClient, GitHubNotFoundError
+from ._client import DEFAULT_BASE_URL, GitHubClient
 from ._index import (
     ChunkIndex,
     ThreadIndex,
@@ -33,7 +33,7 @@ from ._threads import (
     count_threads,
     fetch_all_issues,
     fetch_discussions,
-    fetch_one_issue,
+    fetch_threads,
     probe,
     search_candidates,
     thread_documents,
@@ -316,14 +316,7 @@ class GitHubIssuesRetriever(BaseRetriever):
     def _search_mode(self, query: str, k: int) -> list[Document]:
         numbers = search_candidates(self.client, self.repo, search_variants(query))
         prior = [("issue", n) for n in numbers]
-        threads: list[Thread] = []
-        for n in numbers[: self.max_candidates]:
-            try:
-                t = fetch_one_issue(self.client, self.repo, n)
-            except GitHubNotFoundError:  # deleted or transferred since the search
-                continue
-            if t is not None:
-                threads.append(t)
+        threads = fetch_threads(self.client, self.repo, numbers[: self.max_candidates])
         # Search order is a ranking too: keep it by listing candidates first-seen first.
         docs = [d for t in threads for d in thread_documents(t, self.repo)]
         if not docs:

@@ -137,6 +137,8 @@ def _cache_key(method: str, url: str, params: dict[str, Any] | None) -> str:
 class _Core:
     """State and decisions shared by the sync and async clients."""
 
+    graphql_issues = True  # switched off per client if GitHub refuses the GraphQL issue queries
+
     def __init__(
         self,
         token: str | SecretStr | None,
@@ -175,6 +177,13 @@ class _Core:
 
     def url(self, path: str) -> str:
         return path if path.startswith("http") else f"{self.base_url}{path}"
+
+    @property
+    def graphql_url(self) -> str:
+        """``/graphql`` on github.com; GitHub Enterprise serves it beside ``/api/v3``."""
+        if self.base_url.endswith("/api/v3"):
+            return f"{self.base_url[: -len('/v3')]}/graphql"
+        return f"{self.base_url}/graphql"
 
     def record(self, resp: httpx.Response) -> None:
         self.requests_made += 1
@@ -247,6 +256,13 @@ class _Core:
             return str(resp.json().get("message", resp.text[:200]))
         except Exception:
             return resp.text[:200]
+
+    @staticmethod
+    def graphql_data(body: dict[str, Any], partial: bool) -> dict[str, Any]:
+        errors = body.get("errors")
+        if errors and not (partial and body.get("data")):
+            raise GitHubGraphQLError(f"GraphQL error: {errors[0].get('message')}")
+        return body["data"]  # type: ignore[no-any-return]
 
     @staticmethod
     def check_declared_size(resp: httpx.Response, max_bytes: int | None) -> None:
@@ -409,14 +425,16 @@ class GitHubClient:
                     return
             url, params = _next_link(resp), None
 
-    def graphql(self, query: str, variables: dict[str, Any] | None = None) -> dict[str, Any]:
+    def graphql(
+        self, query: str, variables: dict[str, Any] | None = None, *, partial: bool = False
+    ) -> dict[str, Any]:
+        """Run a GraphQL query. With ``partial``, return the data even if some fields errored."""
         resp, _ = self._send(
-            "POST", "/graphql", json={"query": query, "variables": variables or {}}
+            "POST",
+            self._core.graphql_url,
+            json={"query": query, "variables": variables or {}},
         )
-        body = self._core.json(resp)
-        if body.get("errors"):
-            raise GitHubGraphQLError(f"GraphQL error: {body['errors'][0].get('message')}")
-        return body["data"]  # type: ignore[no-any-return]
+        return self._core.graphql_data(self._core.json(resp), partial)
 
     def download(self, path: str, *, max_bytes: int | None = None) -> bytes:
         """Download a (possibly redirected) binary resource such as a repository tarball.
@@ -567,14 +585,15 @@ class AsyncGitHubClient:
                     return
             url, params = _next_link(resp), None
 
-    async def graphql(self, query: str, variables: dict[str, Any] | None = None) -> dict[str, Any]:
+    async def graphql(
+        self, query: str, variables: dict[str, Any] | None = None, *, partial: bool = False
+    ) -> dict[str, Any]:
         resp, _ = await self._send(
-            "POST", "/graphql", json={"query": query, "variables": variables or {}}
+            "POST",
+            self._core.graphql_url,
+            json={"query": query, "variables": variables or {}},
         )
-        body = self._core.json(resp)
-        if body.get("errors"):
-            raise GitHubGraphQLError(f"GraphQL error: {body['errors'][0].get('message')}")
-        return body["data"]  # type: ignore[no-any-return]
+        return self._core.graphql_data(self._core.json(resp), partial)
 
     async def download(self, path: str, *, max_bytes: int | None = None) -> bytes:
         c = self._core

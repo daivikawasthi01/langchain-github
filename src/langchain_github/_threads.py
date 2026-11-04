@@ -101,14 +101,20 @@ def duplicate_target(text: str | None, repo: str | None = None) -> int | None:
     return None
 
 
+def _duplicate_in(state: str | None, bodies: list[str | None], repo: str | None) -> int | None:
+    """The issue a closed thread says it duplicates (the last such comment wins)."""
+    dup = None
+    if state == "closed":
+        for body in bodies:
+            dup = duplicate_target(body, repo) or dup
+    return dup
+
+
 def build_issue_thread(
     issue: dict[str, Any], comments: list[dict[str, Any]], merged_prs: list[int]
 ) -> Thread:
-    dup = None
     repo = repo_of_url(issue.get("html_url", ""))
-    if issue.get("state") == "closed":
-        for c in comments:
-            dup = duplicate_target(c.get("body"), repo) or dup
+    dup = _duplicate_in(issue.get("state"), [c.get("body") for c in comments], repo)
     return Thread(
         kind="issue",
         number=issue["number"],
@@ -151,6 +157,149 @@ def build_discussion_thread(node: dict[str, Any]) -> Thread:
 # -- fetching ---------------------------------------------------------------------------------
 
 
+_ISSUE_FIELDS = """
+  number title body url state stateReason updatedAt
+  labels(first: 20) { nodes { name } }
+  comments(first: 50) { pageInfo { hasNextPage } nodes { databaseId url body } }
+  closedByPullRequestsReferences(first: 10, includeClosedPrs: false) {
+    nodes { number merged repository { nameWithOwner } }
+  }
+  timelineItems(first: 20, itemTypes: [CROSS_REFERENCED_EVENT]) {
+    nodes {
+      ... on CrossReferencedEvent {
+        source { ... on PullRequest { number merged title body repository { nameWithOwner } } }
+      }
+    }
+  }
+"""
+
+_ISSUES_QUERY = (
+    """
+query($owner: String!, $name: String!, $after: String, $states: [IssueState!]) {
+  repository(owner: $owner, name: $name) {
+    issues(first: 50, after: $after, states: $states,
+           orderBy: {field: CREATED_AT, direction: DESC}) {
+      pageInfo { hasNextPage endCursor }
+      nodes {"""
+    + _ISSUE_FIELDS
+    + """}
+    }
+  }
+}
+"""
+)
+
+_BATCH_SIZE = 20
+
+
+def _batch_query(numbers: list[int]) -> str:
+    aliases = "\n".join(
+        f"i{int(n)}: issueOrPullRequest(number: {int(n)}) "
+        f"{{ __typename ... on Issue {{ {_ISSUE_FIELDS} }} }}"
+        for n in numbers
+    )
+    return (
+        "query($owner: String!, $name: String!) "
+        f"{{ repository(owner: $owner, name: $name) {{ {aliases} }} }}"
+    )
+
+
+def _in_repo(pr: dict[str, Any], repo: str) -> bool:
+    return bool((pr.get("repository") or {}).get("nameWithOwner", repo).lower() == repo.lower())
+
+
+def thread_from_graphql(client: GitHubClient, repo: str, node: dict[str, Any]) -> Thread:
+    """Convert a GraphQL ``Issue`` node. Comments beyond the first page come from REST."""
+    number = node["number"]
+    if node["comments"]["pageInfo"]["hasNextPage"]:
+        rest = client.paginate(f"/repos/{repo}/issues/{number}/comments")
+        comments = [Comment(str(c["id"]), c["html_url"], c.get("body") or "") for c in rest]
+    else:
+        comments = [
+            Comment(str(c["databaseId"]), c["url"], c.get("body") or "")
+            for c in node["comments"]["nodes"]
+        ]
+    state = str(node["state"]).lower()
+    merged = {
+        pr["number"]
+        for pr in node["closedByPullRequestsReferences"]["nodes"]
+        if pr.get("merged") and _in_repo(pr, repo)
+    }
+    # GitHub only links a closing PR that targets the default branch. A backport that says
+    # "Fixes #12" is found from the issue's cross-references instead, as the REST path does.
+    for event in node.get("timelineItems", {}).get("nodes", []):
+        pr = event.get("source") or {}
+        if pr.get("merged") and _in_repo(pr, repo):
+            if number in closing_references(f"{pr.get('title', '')}\n{pr.get('body') or ''}", repo):
+                merged.add(pr["number"])
+    return Thread(
+        kind="issue",
+        number=number,
+        title=node.get("title") or "",
+        body=node.get("body") or "",
+        url=node["url"],
+        state=state,
+        state_reason=(node.get("stateReason") or "").lower() or None,
+        labels=[lbl["name"] for lbl in node["labels"]["nodes"]],
+        comments=comments,
+        resolved_by=sorted(merged),
+        duplicate_of=_duplicate_in(state, [c.body for c in comments], repo),
+        updated_at=node.get("updatedAt", ""),
+    )
+
+
+def _use_graphql(client: GitHubClient) -> bool:
+    """GraphQL needs a signed-in user; it also returns closing PRs without extra requests."""
+    return client.core.authenticated and client.core.graphql_issues
+
+
+def _issues_graphql(client: GitHubClient, repo: str, max_threads: int, state: str) -> list[Thread]:
+    owner, name = repo.split("/", 1)
+    states = None if state == "all" else [state.upper()]
+    out: list[Thread] = []
+    after: str | None = None
+    while len(out) < max_threads:
+        data = client.graphql(
+            _ISSUES_QUERY, {"owner": owner, "name": name, "after": after, "states": states}
+        )
+        page = data["repository"]["issues"]
+        out.extend(thread_from_graphql(client, repo, n) for n in page["nodes"])
+        if not page["pageInfo"]["hasNextPage"]:
+            break
+        after = page["pageInfo"]["endCursor"]
+    return out[:max_threads]
+
+
+def fetch_threads(client: GitHubClient, repo: str, numbers: list[int]) -> list[Thread]:
+    """Full threads for these issue numbers, in order. Pull requests and missing numbers are
+    skipped. Signed in, up to 20 threads come back in one request."""
+    if _use_graphql(client):
+        owner, name = repo.split("/", 1)
+        by_number: dict[int, Thread] = {}
+        try:
+            for i in range(0, len(numbers), _BATCH_SIZE):
+                chunk = numbers[i : i + _BATCH_SIZE]
+                data = client.graphql(
+                    _batch_query(chunk), {"owner": owner, "name": name}, partial=True
+                )["repository"]
+                for n in chunk:
+                    node = data.get(f"i{n}")
+                    if node and node.get("__typename") == "Issue":
+                        by_number[n] = thread_from_graphql(client, repo, node)
+            return [by_number[n] for n in numbers if n in by_number]
+        except GitHubGraphQLError:
+            client.core.graphql_issues = False
+    out: list[Thread] = []
+    for n in numbers:
+        try:
+            thread = fetch_one_issue(client, repo, n)
+        except GitHubNotFoundError:  # deleted or transferred since the search
+            continue
+        if thread is not None:
+            out.append(thread)
+    return out
+
+
 def probe(client: GitHubClient, repo: str) -> str:
     """Newest ``updated_at`` across issues and PRs. One request, free when nothing changed."""
     items = client.get_json(
@@ -189,7 +338,16 @@ def merged_pr_closers(client: GitHubClient, repo: str, limit: int = 1000) -> dic
 def fetch_all_issues(
     client: GitHubClient, repo: str, *, max_threads: int, state: str = "all"
 ) -> list[Thread]:
-    """Every issue with its comments using repo-wide listings (about N/100 requests each)."""
+    """Every issue with its comments and closing PRs.
+
+    Signed in, this is GraphQL: about N/50 requests for everything. Signed out it uses the REST
+    listings of issues, comments and merged pull requests (about 3N/100 requests).
+    """
+    if _use_graphql(client):
+        try:
+            return _issues_graphql(client, repo, max_threads, state)
+        except GitHubGraphQLError:
+            client.core.graphql_issues = False
     issues = [
         i
         for i in client.paginate(

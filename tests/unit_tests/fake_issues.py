@@ -1,6 +1,11 @@
 """A tiny in-memory GitHub issues API served through respx."""
 
+import json
+import re
+
 import httpx
+
+from langchain_github._threads import closing_references
 
 API = "https://api.github.com"
 REPO = "acme/demo"
@@ -69,9 +74,101 @@ class FakeIssues:
                 "comments": {"nodes": []},
             }
         ]
+        self.graphql_failures: list[str] = []  # GraphQL messages to refuse, one per request
+        self.fork_pr = False  # also report a merged PR from another repository as closing #2
         self.search_hits: list[int] = []
         self.calls: list[str] = []
         self.etag_hits = 0
+
+    def _gql_issue(self, i):
+        n = i["number"]
+        text_closers = [
+            p for p in self.pulls if n in closing_references(f"{p['title']}\n{p['body']}", REPO)
+        ]
+        closers = [  # GitHub links only PRs aimed at the default branch
+            {"number": p["number"], "merged": True, "repository": {"nameWithOwner": REPO}}
+            for p in text_closers
+            if p.get("linked", True)
+        ]
+        events = [
+            {
+                "source": {
+                    "number": p["number"],
+                    "merged": True,
+                    "title": p["title"],
+                    "body": p["body"],
+                    "repository": {"nameWithOwner": REPO},
+                }
+            }
+            for p in text_closers
+        ]
+        if self.fork_pr and n == 2:
+            closers.append(
+                {"number": 77, "merged": True, "repository": {"nameWithOwner": "fork/demo"}}
+            )
+        mine = [c for c in self.comments if c["issue_url"].endswith(f"/{n}")]
+        return {
+            "__typename": "Issue",
+            "number": n,
+            "title": i["title"],
+            "body": i["body"],
+            "url": i["html_url"],
+            "state": i["state"].upper(),
+            "stateReason": i["state_reason"].upper() if i["state_reason"] else None,
+            "updatedAt": i["updated_at"],
+            "labels": {"nodes": i["labels"]},
+            "comments": {
+                "pageInfo": {"hasNextPage": n in getattr(self, "overflow", set())},
+                "nodes": [
+                    {"databaseId": c["id"], "url": c["html_url"], "body": c["body"]} for c in mine
+                ],
+            },
+            "closedByPullRequestsReferences": {"nodes": closers},
+            "timelineItems": {"nodes": events},
+        }
+
+    def _graphql(self, req):
+        query = json.loads(req.content)["query"]
+        if self.graphql_failures:
+            return httpx.Response(
+                200, json={"data": None, "errors": [{"message": self.graphql_failures.pop(0)}]}
+            )
+        real = [i for i in self.issues if "pull_request" not in i]
+        if "issueOrPullRequest" in query:
+            self.calls.append("graphql:batch")
+            out = {}
+            for n in map(int, re.findall(r"i(\d+): issueOrPullRequest", query)):
+                found = next((i for i in self.issues if i["number"] == n), None)
+                if found is None:
+                    out[f"i{n}"] = None
+                elif "pull_request" in found:
+                    out[f"i{n}"] = {"__typename": "PullRequest"}
+                else:
+                    out[f"i{n}"] = self._gql_issue(found)
+            errors = [{"message": "Could not resolve"}] if None in out.values() else None
+            return httpx.Response(200, json={"data": {"repository": out}, "errors": errors})
+        if "issues(first" in query:
+            self.calls.append("graphql:issues")
+            variables = json.loads(req.content)["variables"]
+            nodes = [self._gql_issue(i) for i in real]
+            if variables.get("states"):
+                nodes = [n for n in nodes if n["state"] in variables["states"]]
+            page = {"pageInfo": {"hasNextPage": False, "endCursor": None}, "nodes": nodes}
+            return httpx.Response(200, json={"data": {"repository": {"issues": page}}})
+        self.calls.append("graphql:discussions")
+        return httpx.Response(
+            200,
+            json={
+                "data": {
+                    "repository": {
+                        "discussions": {
+                            "pageInfo": {"hasNextPage": False, "endCursor": None},
+                            "nodes": self.discussions,
+                        }
+                    }
+                }
+            },
+        )
 
     def mount(self, router):
         def handle(req: httpx.Request) -> httpx.Response:
@@ -100,20 +197,6 @@ class FakeIssues:
                 return httpx.Response(200, json=self.comments)
             if path == f"/repos/{REPO}/pulls":
                 return httpx.Response(200, json=self.pulls)
-            if path == "/graphql":
-                return httpx.Response(
-                    200,
-                    json={
-                        "data": {
-                            "repository": {
-                                "discussions": {
-                                    "pageInfo": {"hasNextPage": False, "endCursor": None},
-                                    "nodes": self.discussions,
-                                }
-                            }
-                        }
-                    },
-                )
             num = path.rsplit("/", 1)[-1]
             if path.endswith("/timeline"):
                 n = int(path.split("/")[-2])
@@ -137,4 +220,4 @@ class FakeIssues:
             return httpx.Response(404, json={"message": "nope"})
 
         router.get(url__regex=rf"{API}/.*").mock(side_effect=handle)
-        router.post(f"{API}/graphql").mock(side_effect=handle)
+        router.post(f"{API}/graphql").mock(side_effect=self._graphql)
