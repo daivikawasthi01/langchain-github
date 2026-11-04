@@ -4,17 +4,23 @@ build-backend = "hatchling.build"
 
 [project]
 name = "langchain-github"
-version = "0.1.0.dev0"
+version = "0.1.0"
 description = "GitHub retriever and loaders for LangChain: query-driven search over repo code, docs, issues and discussions."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
+authors = [{ name = "Daivik Awasthi", email = "daivikawasthi.01@gmail.com" }]
 keywords = ["langchain", "github", "retriever", "rag", "document-loader", "llm"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Typing :: Typed",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = [
@@ -37,9 +43,14 @@ dev = [
 
 [project.urls]
 Homepage = "https://github.com/daivikawasthi01/langchain-github"
+Repository = "https://github.com/daivikawasthi01/langchain-github"
+Issues = "https://github.com/daivikawasthi01/langchain-github/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/langchain_github"]
+
+[tool.hatch.build.targets.sdist]
+exclude = ["PROGRESS.md", ".github", "eval", ".cache"]
 
 [tool.ruff]
 line-length = 100
