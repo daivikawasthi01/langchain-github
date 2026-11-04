@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "langchain-github"
 version = "0.1.0"
-description = "GitHub retriever and loaders for LangChain: query-driven search over repo code, docs, issues and discussions."
+description = "LangChain retrievers and loaders for GitHub repos, issues and discussions"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
