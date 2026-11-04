@@ -1,0 +1,2 @@
+code_raw     hit@1=0.00  hit@5=0.00  mrr=0.00  {'pallets/click': 0, 'expressjs/express': 0, 'spf13/cobra': 0}  (182.0s)
+code_kw      hit@1=0.13  hit@5=0.27  mrr=0.19  {'pallets/click': 0.4, 'expressjs/express': 0.1, 'spf13/cobra': 0.3}  (184.1s)

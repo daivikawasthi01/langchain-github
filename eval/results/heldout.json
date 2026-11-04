@@ -1,0 +1,739 @@
+{
+ "naive_bm25": {
+  "hit@1": 0.35,
+  "hit@5": 0.8,
+  "mrr": 0.556,
+  "by_repo_hit@5": {
+   "psf/requests": 0.92,
+   "pallets/flask": 0.62
+  },
+  "misses": [
+   {
+    "id": "requests-h10",
+    "question": "Where is the check of an HTTPS server's certificate configured?",
+    "top": [
+     "docs/community/faq.rst",
+     "docs/user/quickstart.rst",
+     "tests/test_requests.py",
+     "tests/certs/README.md",
+     "HISTORY.md"
+    ]
+   },
+   {
+    "id": "flask-h01",
+    "question": "How do I run some code ahead of every incoming request?",
+    "top": [
+     "docs/patterns/requestchecksum.rst",
+     "docs/quickstart.rst",
+     "docs/web-security.rst",
+     "docs/views.rst",
+     "docs/patterns/fileuploads.rst"
+    ]
+   },
+   {
+    "id": "flask-h07",
+    "question": "How can I split an application into reusable modules with their own routes?",
+    "top": [
+     "docs/design.rst",
+     "docs/patterns/sqlalchemy.rst",
+     "docs/views.rst",
+     "docs/patterns/wtforms.rst",
+     "docs/appcontext.rst"
+    ]
+   },
+   {
+    "id": "flask-h08",
+    "question": "How do I drive my app from automated tests without starting a server?",
+    "top": [
+     "docs/errorhandling.rst",
+     "docs/patterns/fileuploads.rst",
+     "docs/deploying/mod_wsgi.rst",
+     "docs/web-security.rst",
+     "docs/config.rst"
+    ]
+   }
+  ],
+  "seconds": 0.1,
+  "top5": {
+   "requests-h01": [
+    "docs/user/quickstart.rst",
+    "docs/user/advanced.rst",
+    "src/requests/adapters.py",
+    "HISTORY.md",
+    "src/requests/sessions.py"
+   ],
+   "requests-h02": [
+    "HISTORY.md",
+    ".github/CONTRIBUTING.md",
+    "docs/community/faq.rst",
+    "docs/Makefile",
+    "src/requests/sessions.py"
+   ],
+   "requests-h03": [
+    "src/requests/adapters.py",
+    "docs/user/advanced.rst",
+    "docs/user/quickstart.rst",
+    ".github/CONTRIBUTING.md",
+    "HISTORY.md"
+   ],
+   "requests-h04": [
+    "src/requests/sessions.py",
+    "src/requests/auth.py",
+    "src/requests/adapters.py",
+    "src/requests/utils.py",
+    "tests/test_requests.py"
+   ],
+   "requests-h05": [
+    "docs/user/authentication.rst",
+    "docs/user/quickstart.rst",
+    ".github/CONTRIBUTING.md",
+    "HISTORY.md",
+    "src/requests/adapters.py"
+   ],
+   "requests-h06": [
+    "tests/test_requests.py",
+    "src/requests/sessions.py",
+    "docs/user/advanced.rst",
+    "HISTORY.md",
+    "src/requests/models.py"
+   ],
+   "requests-h07": [
+    ".github/CONTRIBUTING.md",
+    "HISTORY.md",
+    "src/requests/sessions.py",
+    "src/requests/models.py",
+    "docs/user/quickstart.rst"
+   ],
+   "requests-h08": [
+    "docs/user/advanced.rst",
+    "HISTORY.md",
+    ".github/workflows/codeql-analysis.yml",
+    "docs/dev/contributing.rst",
+    "docs/api.rst"
+   ],
+   "requests-h09": [
+    "docs/user/quickstart.rst",
+    "src/requests/sessions.py",
+    "src/requests/adapters.py",
+    "src/requests/api.py",
+    "src/requests/models.py"
+   ],
+   "requests-h10": [
+    "docs/community/faq.rst",
+    "docs/user/quickstart.rst",
+    "tests/test_requests.py",
+    "tests/certs/README.md",
+    "HISTORY.md"
+   ],
+   "requests-h11": [
+    "docs/user/quickstart.rst",
+    "docs/user/advanced.rst",
+    "src/requests/api.py",
+    "HISTORY.md",
+    "src/requests/models.py"
+   ],
+   "requests-h12": [
+    "tests/test_requests.py",
+    "docs/user/advanced.rst",
+    "src/requests/adapters.py",
+    "HISTORY.md",
+    ".github/CONTRIBUTING.md"
+   ],
+   "flask-h01": [
+    "docs/patterns/requestchecksum.rst",
+    "docs/quickstart.rst",
+    "docs/web-security.rst",
+    "docs/views.rst",
+    "docs/patterns/fileuploads.rst"
+   ],
+   "flask-h02": [
+    "docs/extensiondev.rst",
+    "docs/patterns/sqlite3.rst",
+    "docs/patterns/sqlalchemy.rst",
+    "docs/tutorial/database.rst",
+    "docs/patterns/index.rst"
+   ],
+   "flask-h03": [
+    "docs/errorhandling.rst",
+    "docs/blueprints.rst",
+    "tests/test_basic.py",
+    "docs/api.rst",
+    "docs/quickstart.rst"
+   ],
+   "flask-h04": [
+    "docs/api.rst",
+    "CHANGES.rst",
+    "src/flask/sessions.py",
+    "docs/config.rst",
+    "src/flask/app.py"
+   ],
+   "flask-h05": [
+    "docs/patterns/javascript.rst",
+    "examples/celery/src/task_app/tasks.py",
+    "src/flask/app.py",
+    "docs/quickstart.rst",
+    "tests/test_json.py"
+   ],
+   "flask-h06": [
+    "docs/quickstart.rst",
+    "docs/patterns/fileuploads.rst",
+    "docs/tutorial/layout.rst",
+    "docs/web-security.rst",
+    "docs/testing.rst"
+   ],
+   "flask-h07": [
+    "docs/design.rst",
+    "docs/patterns/sqlalchemy.rst",
+    "docs/views.rst",
+    "docs/patterns/wtforms.rst",
+    "docs/appcontext.rst"
+   ],
+   "flask-h08": [
+    "docs/errorhandling.rst",
+    "docs/patterns/fileuploads.rst",
+    "docs/deploying/mod_wsgi.rst",
+    "docs/web-security.rst",
+    "docs/config.rst"
+   ]
+  }
+ },
+ "naive_vec": {
+  "hit@1": 0.65,
+  "hit@5": 0.9,
+  "mrr": 0.755,
+  "by_repo_hit@5": {
+   "psf/requests": 1,
+   "pallets/flask": 0.75
+  },
+  "misses": [
+   {
+    "id": "flask-h01",
+    "question": "How do I run some code ahead of every incoming request?",
+    "top": [
+     "docs/shell.rst",
+     "docs/testing.rst",
+     "src/flask/app.py",
+     "docs/patterns/deferredcallbacks.rst",
+     "tests/test_cli.py"
+    ]
+   },
+   {
+    "id": "flask-h07",
+    "question": "How can I split an application into reusable modules with their own routes?",
+    "top": [
+     "docs/lifecycle.rst",
+     "docs/patterns/packages.rst",
+     "tests/test_apps/subdomaintestmodule/__init__.py",
+     "docs/patterns/appdispatch.rst",
+     "src/flask/testing.py"
+    ]
+   }
+  ],
+  "seconds": 192.7,
+  "top5": {
+   "requests-h01": [
+    "src/requests/utils.py",
+    "tests/test_utils.py",
+    "docs/api.rst",
+    "tests/test_requests.py",
+    "src/requests/adapters.py"
+   ],
+   "requests-h02": [
+    "src/requests/sessions.py",
+    "docs/user/quickstart.rst",
+    "src/requests/models.py",
+    "tests/test_requests.py",
+    "HISTORY.md"
+   ],
+   "requests-h03": [
+    "tests/test_testserver.py",
+    "src/requests/exceptions.py",
+    "docs/user/advanced.rst",
+    "src/requests/adapters.py",
+    "src/requests/__init__.py"
+   ],
+   "requests-h04": [
+    "src/requests/utils.py",
+    "src/requests/auth.py",
+    "src/requests/sessions.py",
+    "docs/user/advanced.rst",
+    "tests/test_lowlevel.py"
+   ],
+   "requests-h05": [
+    "docs/user/authentication.rst",
+    "src/requests/utils.py",
+    "tests/test_utils.py",
+    "tests/test_requests.py",
+    "src/requests/sessions.py"
+   ],
+   "requests-h06": [
+    "docs/user/advanced.rst",
+    "tests/test_requests.py",
+    "src/requests/models.py",
+    "src/requests/cookies.py",
+    "src/requests/sessions.py"
+   ],
+   "requests-h07": [
+    "src/requests/models.py",
+    "docs/user/advanced.rst",
+    "docs/user/quickstart.rst",
+    "tests/test_utils.py",
+    "src/requests/utils.py"
+   ],
+   "requests-h08": [
+    "docs/user/quickstart.rst",
+    "src/requests/models.py",
+    "docs/user/advanced.rst",
+    "tests/testserver/server.py",
+    "src/requests/sessions.py"
+   ],
+   "requests-h09": [
+    "src/requests/models.py",
+    "docs/user/quickstart.rst",
+    "src/requests/sessions.py",
+    "src/requests/status_codes.py",
+    "tests/test_utils.py"
+   ],
+   "requests-h10": [
+    "tests/test_requests.py",
+    "src/requests/utils.py",
+    "src/requests/sessions.py",
+    "src/requests/adapters.py",
+    "docs/user/advanced.rst"
+   ],
+   "requests-h11": [
+    "docs/user/quickstart.rst",
+    "docs/user/advanced.rst",
+    "src/requests/api.py",
+    "tests/test_requests.py",
+    "src/requests/models.py"
+   ],
+   "requests-h12": [
+    "docs/user/advanced.rst",
+    "src/requests/adapters.py",
+    "tests/test_requests.py",
+    "tests/testserver/server.py",
+    "src/requests/exceptions.py"
+   ],
+   "flask-h01": [
+    "docs/shell.rst",
+    "docs/testing.rst",
+    "src/flask/app.py",
+    "docs/patterns/deferredcallbacks.rst",
+    "tests/test_cli.py"
+   ],
+   "flask-h02": [
+    "docs/shell.rst",
+    "tests/test_signals.py",
+    "docs/patterns/sqlite3.rst",
+    "examples/tutorial/flaskr/db.py",
+    "docs/api.rst"
+   ],
+   "flask-h03": [
+    "docs/errorhandling.rst",
+    "docs/blueprints.rst",
+    "src/flask/app.py",
+    "docs/quickstart.rst",
+    "src/flask/wrappers.py"
+   ],
+   "flask-h04": [
+    "docs/web-security.rst",
+    "docs/quickstart.rst",
+    "src/flask/sessions.py",
+    "tests/test_testing.py",
+    "docs/api.rst"
+   ],
+   "flask-h05": [
+    "docs/patterns/javascript.rst",
+    "docs/quickstart.rst",
+    "src/flask/app.py",
+    "src/flask/json/__init__.py",
+    "examples/javascript/js_example/views.py"
+   ],
+   "flask-h06": [
+    "src/flask/wrappers.py",
+    "src/flask/app.py",
+    "docs/web-security.rst",
+    "tests/test_request.py",
+    "docs/patterns/fileuploads.rst"
+   ],
+   "flask-h07": [
+    "docs/lifecycle.rst",
+    "docs/patterns/packages.rst",
+    "tests/test_apps/subdomaintestmodule/__init__.py",
+    "docs/patterns/appdispatch.rst",
+    "src/flask/testing.py"
+   ],
+   "flask-h08": [
+    "docs/testing.rst",
+    "tests/test_templating.py",
+    "tests/test_testing.py",
+    "examples/tutorial/tests/test_factory.py",
+    "tests/test_helpers.py"
+   ]
+  }
+ },
+ "ours_bm25": {
+  "hit@1": 0.6,
+  "hit@5": 0.85,
+  "mrr": 0.729,
+  "by_repo_hit@5": {
+   "psf/requests": 0.92,
+   "pallets/flask": 0.75
+  },
+  "misses": [
+   {
+    "id": "requests-h10",
+    "question": "Where is the check of an HTTPS server's certificate configured?",
+    "top": [
+     "docs/community/faq.rst",
+     "tests/test_requests.py",
+     "docs/user/quickstart.rst",
+     "tests/certs/README.md",
+     "tests/certs/expired/README.md"
+    ]
+   },
+   {
+    "id": "flask-h07",
+    "question": "How can I split an application into reusable modules with their own routes?",
+    "top": [
+     "docs/design.rst",
+     "docs/views.rst",
+     "docs/patterns/sqlalchemy.rst",
+     "docs/tutorial/next.rst",
+     "docs/quickstart.rst"
+    ]
+   },
+   {
+    "id": "flask-h08",
+    "question": "How do I drive my app from automated tests without starting a server?",
+    "top": [
+     "docs/errorhandling.rst",
+     "docs/deploying/mod_wsgi.rst",
+     "src/flask/app.py",
+     "docs/server.rst",
+     "tests/test_appctx.py"
+    ]
+   }
+  ],
+  "seconds": 283.9,
+  "top5": {
+   "requests-h01": [
+    "docs/user/advanced.rst",
+    "src/requests/utils.py",
+    "src/requests/sessions.py",
+    "HISTORY.md",
+    "src/requests/adapters.py"
+   ],
+   "requests-h02": [
+    "src/requests/sessions.py",
+    "src/requests/models.py",
+    "tests/test_requests.py",
+    "tests/testserver/server.py",
+    "HISTORY.md"
+   ],
+   "requests-h03": [
+    "src/requests/adapters.py",
+    "docs/user/advanced.rst",
+    "HISTORY.md",
+    "src/requests/sessions.py",
+    "docs/dev/contributing.rst"
+   ],
+   "requests-h04": [
+    "src/requests/sessions.py",
+    "src/requests/auth.py",
+    "tests/test_requests.py",
+    "src/requests/utils.py",
+    "src/requests/adapters.py"
+   ],
+   "requests-h05": [
+    "docs/user/authentication.rst",
+    "tests/test_utils.py",
+    "docs/user/quickstart.rst",
+    "tests/test_requests.py",
+    ".github/workflows/run-tests.yml"
+   ],
+   "requests-h06": [
+    "src/requests/sessions.py",
+    "tests/test_requests.py",
+    "docs/api.rst",
+    "src/requests/models.py",
+    "src/requests/cookies.py"
+   ],
+   "requests-h07": [
+    "src/requests/models.py",
+    "src/requests/utils.py",
+    "docs/user/advanced.rst",
+    "docs/user/quickstart.rst",
+    "tests/test_utils.py"
+   ],
+   "requests-h08": [
+    "docs/user/advanced.rst",
+    "tests/test_lowlevel.py",
+    "docs/dev/contributing.rst",
+    "tests/__init__.py",
+    "docs/user/install.rst"
+   ],
+   "requests-h09": [
+    "src/requests/models.py",
+    "src/requests/sessions.py",
+    "src/requests/adapters.py",
+    "docs/user/quickstart.rst",
+    "src/requests/utils.py"
+   ],
+   "requests-h10": [
+    "docs/community/faq.rst",
+    "tests/test_requests.py",
+    "docs/user/quickstart.rst",
+    "tests/certs/README.md",
+    "tests/certs/expired/README.md"
+   ],
+   "requests-h11": [
+    "src/requests/models.py",
+    "docs/user/advanced.rst",
+    "docs/user/quickstart.rst",
+    "HISTORY.md",
+    "docs/index.rst"
+   ],
+   "requests-h12": [
+    "tests/test_requests.py",
+    "docs/user/advanced.rst",
+    "src/requests/adapters.py",
+    "HISTORY.md",
+    "src/requests/exceptions.py"
+   ],
+   "flask-h01": [
+    "docs/patterns/fileuploads.rst",
+    "docs/errorhandling.rst",
+    "src/flask/sansio/scaffold.py",
+    "CHANGES.rst",
+    "docs/patterns/requestchecksum.rst"
+   ],
+   "flask-h02": [
+    "docs/extensiondev.rst",
+    "docs/patterns/sqlite3.rst",
+    "docs/tutorial/database.rst",
+    "docs/patterns/sqlalchemy.rst",
+    "docs/testing.rst"
+   ],
+   "flask-h03": [
+    "docs/errorhandling.rst",
+    "docs/blueprints.rst",
+    "tests/test_basic.py",
+    "docs/quickstart.rst",
+    "docs/tutorial/blog.rst"
+   ],
+   "flask-h04": [
+    "docs/api.rst",
+    "docs/config.rst",
+    "src/flask/sessions.py",
+    "docs/tutorial/views.rst",
+    "docs/web-security.rst"
+   ],
+   "flask-h05": [
+    "docs/patterns/javascript.rst",
+    "docs/views.rst",
+    "tests/type_check/typing_route.py",
+    "src/flask/app.py",
+    "docs/quickstart.rst"
+   ],
+   "flask-h06": [
+    "docs/patterns/fileuploads.rst",
+    "docs/quickstart.rst",
+    "src/flask/wrappers.py",
+    "tests/test_basic.py",
+    ".editorconfig"
+   ],
+   "flask-h07": [
+    "docs/design.rst",
+    "docs/views.rst",
+    "docs/patterns/sqlalchemy.rst",
+    "docs/tutorial/next.rst",
+    "docs/quickstart.rst"
+   ],
+   "flask-h08": [
+    "docs/errorhandling.rst",
+    "docs/deploying/mod_wsgi.rst",
+    "src/flask/app.py",
+    "docs/server.rst",
+    "tests/test_appctx.py"
+   ]
+  }
+ },
+ "ours_hybrid": {
+  "hit@1": 0.6,
+  "hit@5": 0.9,
+  "mrr": 0.74,
+  "by_repo_hit@5": {
+   "psf/requests": 1,
+   "pallets/flask": 0.75
+  },
+  "misses": [
+   {
+    "id": "flask-h07",
+    "question": "How can I split an application into reusable modules with their own routes?",
+    "top": [
+     "docs/patterns/packages.rst",
+     "docs/cli.rst",
+     "src/flask/sansio/app.py",
+     "docs/lifecycle.rst",
+     "docs/tutorial/layout.rst"
+    ]
+   },
+   {
+    "id": "flask-h08",
+    "question": "How do I drive my app from automated tests without starting a server?",
+    "top": [
+     "docs/quickstart.rst",
+     "tests/test_appctx.py",
+     "examples/tutorial/tests/test_factory.py",
+     "tests/test_basic.py",
+     "src/flask/cli.py"
+    ]
+   }
+  ],
+  "seconds": 539.5,
+  "top5": {
+   "requests-h01": [
+    "src/requests/utils.py",
+    "tests/test_utils.py",
+    "src/requests/adapters.py",
+    "HISTORY.md",
+    "docs/user/advanced.rst"
+   ],
+   "requests-h02": [
+    "src/requests/models.py",
+    "src/requests/sessions.py",
+    "tests/test_requests.py",
+    "HISTORY.md",
+    "tests/test_lowlevel.py"
+   ],
+   "requests-h03": [
+    "docs/user/advanced.rst",
+    "tests/test_testserver.py",
+    "HISTORY.md",
+    "tests/test_requests.py",
+    "src/requests/models.py"
+   ],
+   "requests-h04": [
+    "src/requests/utils.py",
+    "src/requests/auth.py",
+    "tests/test_lowlevel.py",
+    "docs/user/quickstart.rst",
+    "HISTORY.md"
+   ],
+   "requests-h05": [
+    "tests/test_utils.py",
+    "docs/user/authentication.rst",
+    "tests/test_requests.py",
+    "docs/user/quickstart.rst",
+    "src/requests/utils.py"
+   ],
+   "requests-h06": [
+    "docs/user/advanced.rst",
+    "tests/test_requests.py",
+    "src/requests/cookies.py",
+    "src/requests/sessions.py",
+    "src/requests/models.py"
+   ],
+   "requests-h07": [
+    "src/requests/models.py",
+    "src/requests/utils.py",
+    "docs/user/quickstart.rst",
+    "docs/user/advanced.rst",
+    "tests/test_utils.py"
+   ],
+   "requests-h08": [
+    "docs/user/advanced.rst",
+    "tests/testserver/server.py",
+    "docs/user/quickstart.rst",
+    "tests/test_lowlevel.py",
+    "HISTORY.md"
+   ],
+   "requests-h09": [
+    "src/requests/models.py",
+    "docs/user/quickstart.rst",
+    "src/requests/structures.py",
+    "src/requests/sessions.py",
+    "src/requests/api.py"
+   ],
+   "requests-h10": [
+    "tests/test_requests.py",
+    "docs/user/advanced.rst",
+    "src/requests/adapters.py",
+    "src/requests/sessions.py",
+    "tests/certs/expired/README.md"
+   ],
+   "requests-h11": [
+    "docs/user/advanced.rst",
+    "docs/user/quickstart.rst",
+    "src/requests/api.py",
+    "src/requests/models.py",
+    "src/requests/sessions.py"
+   ],
+   "requests-h12": [
+    "docs/user/advanced.rst",
+    "tests/test_requests.py",
+    "HISTORY.md",
+    "src/requests/adapters.py",
+    "docs/user/quickstart.rst"
+   ],
+   "flask-h01": [
+    "src/flask/sansio/scaffold.py",
+    "src/flask/ctx.py",
+    "docs/shell.rst",
+    "docs/views.rst",
+    "docs/extensiondev.rst"
+   ],
+   "flask-h02": [
+    "docs/patterns/sqlite3.rst",
+    "docs/tutorial/database.rst",
+    "docs/shell.rst",
+    "examples/tutorial/flaskr/db.py",
+    "docs/extensiondev.rst"
+   ],
+   "flask-h03": [
+    "docs/blueprints.rst",
+    "docs/errorhandling.rst",
+    "docs/quickstart.rst",
+    "docs/patterns/javascript.rst",
+    "tests/test_user_error_handler.py"
+   ],
+   "flask-h04": [
+    "docs/api.rst",
+    "docs/tutorial/views.rst",
+    "src/flask/sessions.py",
+    "docs/config.rst",
+    "docs/quickstart.rst"
+   ],
+   "flask-h05": [
+    "docs/patterns/javascript.rst",
+    "docs/quickstart.rst",
+    "docs/views.rst",
+    "src/flask/json/__init__.py",
+    "src/flask/app.py"
+   ],
+   "flask-h06": [
+    "docs/patterns/fileuploads.rst",
+    "src/flask/wrappers.py",
+    "tests/test_request.py",
+    "docs/quickstart.rst",
+    "docs/web-security.rst"
+   ],
+   "flask-h07": [
+    "docs/patterns/packages.rst",
+    "docs/cli.rst",
+    "src/flask/sansio/app.py",
+    "docs/lifecycle.rst",
+    "docs/tutorial/layout.rst"
+   ],
+   "flask-h08": [
+    "docs/quickstart.rst",
+    "tests/test_appctx.py",
+    "examples/tutorial/tests/test_factory.py",
+    "tests/test_basic.py",
+    "src/flask/cli.py"
+   ]
+  }
+ }
+}

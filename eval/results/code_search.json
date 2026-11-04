@@ -1,0 +1,423 @@
+{
+ "code_raw": {
+  "hit@1": 0,
+  "hit@5": 0,
+  "mrr": 0.0,
+  "by_repo_hit@5": {
+   "pallets/click": 0,
+   "expressjs/express": 0,
+   "spf13/cobra": 0
+  },
+  "misses": [
+   {
+    "id": "click-01",
+    "question": "How do I make an option read its default value from an environment variable?",
+    "top": []
+   },
+   {
+    "id": "click-02",
+    "question": "How do I write tests that invoke a command and capture what it prints?",
+    "top": []
+   },
+   {
+    "id": "click-03",
+    "question": "How can I show a progress bar while a long loop is running?",
+    "top": []
+   },
+   {
+    "id": "click-04",
+    "question": "How is tab completion produced for bash, zsh and fish?",
+    "top": []
+   },
+   {
+    "id": "click-05",
+    "question": "Which exception is raised when a user supplies an invalid value for a parameter?",
+    "top": []
+   },
+   {
+    "id": "click-06",
+    "question": "How do I ask the user to confirm before doing something destructive?",
+    "top": []
+   },
+   {
+    "id": "click-07",
+    "question": "How do I group subcommands and chain several of them in one invocation?",
+    "top": []
+   },
+   {
+    "id": "click-08",
+    "question": "How is the help text wrapped and laid out in columns?",
+    "top": []
+   },
+   {
+    "id": "click-09",
+    "question": "How do I accept a file argument that can also be standard input when given a dash?",
+    "top": []
+   },
+   {
+    "id": "click-10",
+    "question": "Where are parameter types such as integer ranges and fixed choices converted and validated?",
+    "top": []
+   },
+   {
+    "id": "express-01",
+    "question": "How does the framework send a JSON response with the correct content type?",
+    "top": []
+   },
+   {
+    "id": "express-02",
+    "question": "How are cookies set and removed on a response?",
+    "top": []
+   },
+   {
+    "id": "express-03",
+    "question": "How does it work out which content type the client prefers?",
+    "top": []
+   },
+   {
+    "id": "express-04",
+    "question": "How do routes and middleware get registered on an application for each HTTP verb?",
+    "top": []
+   },
+   {
+    "id": "express-05",
+    "question": "How are template engines looked up and used to render a view?",
+    "top": []
+   },
+   {
+    "id": "express-06",
+    "question": "How is the client's IP address determined when running behind a proxy?",
+    "top": []
+   },
+   {
+    "id": "express-07",
+    "question": "How can I send a file to the browser as a download with a chosen filename?",
+    "top": []
+   },
+   {
+    "id": "express-08",
+    "question": "How does the main factory function create an app and mix in the request and response prototypes?",
+    "top": []
+   },
+   {
+    "id": "express-09",
+    "question": "How do I redirect a client to a different address?",
+    "top": []
+   },
+   {
+    "id": "express-10",
+    "question": "What breaking changes were introduced in the new major version?",
+    "top": []
+   },
+   {
+    "id": "cobra-01",
+    "question": "How do I require that certain flags are set together or can never be combined?",
+    "top": []
+   },
+   {
+    "id": "cobra-02",
+    "question": "How can I generate manual pages for my commands?",
+    "top": []
+   },
+   {
+    "id": "cobra-03",
+    "question": "How are positional arguments validated, for example requiring exactly a given number?",
+    "top": []
+   },
+   {
+    "id": "cobra-04",
+    "question": "How do I produce a bash completion script for a CLI?",
+    "top": []
+   },
+   {
+    "id": "cobra-05",
+    "question": "How do I offer dynamically computed suggestions for a flag's value?",
+    "top": []
+   },
+   {
+    "id": "cobra-06",
+    "question": "How do flags defined on a parent get inherited by its subcommands?",
+    "top": []
+   },
+   {
+    "id": "cobra-07",
+    "question": "How can I override the help or usage output with my own template?",
+    "top": []
+   },
+   {
+    "id": "cobra-08",
+    "question": "How do I write markdown documentation for an entire command tree?",
+    "top": []
+   },
+   {
+    "id": "cobra-09",
+    "question": "How do I run setup and teardown logic before and after a command executes?",
+    "top": []
+   },
+   {
+    "id": "cobra-10",
+    "question": "How is the PowerShell completion script generated?",
+    "top": []
+   }
+  ],
+  "seconds": 182.0,
+  "top5": {
+   "click-01": [],
+   "click-02": [],
+   "click-03": [],
+   "click-04": [],
+   "click-05": [],
+   "click-06": [],
+   "click-07": [],
+   "click-08": [],
+   "click-09": [],
+   "click-10": [],
+   "express-01": [],
+   "express-02": [],
+   "express-03": [],
+   "express-04": [],
+   "express-05": [],
+   "express-06": [],
+   "express-07": [],
+   "express-08": [],
+   "express-09": [],
+   "express-10": [],
+   "cobra-01": [],
+   "cobra-02": [],
+   "cobra-03": [],
+   "cobra-04": [],
+   "cobra-05": [],
+   "cobra-06": [],
+   "cobra-07": [],
+   "cobra-08": [],
+   "cobra-09": [],
+   "cobra-10": []
+  }
+ },
+ "code_kw": {
+  "hit@1": 0.133,
+  "hit@5": 0.267,
+  "mrr": 0.192,
+  "by_repo_hit@5": {
+   "pallets/click": 0.4,
+   "expressjs/express": 0.1,
+   "spf13/cobra": 0.3
+  },
+  "misses": [
+   {
+    "id": "click-02",
+    "question": "How do I write tests that invoke a command and capture what it prints?",
+    "top": [
+     "CHANGES.md",
+     "src/click/core.py"
+    ]
+   },
+   {
+    "id": "click-04",
+    "question": "How is tab completion produced for bash, zsh and fish?",
+    "top": [
+     "CHANGES.md",
+     "tests/test_shell_completion.py"
+    ]
+   },
+   {
+    "id": "click-05",
+    "question": "Which exception is raised when a user supplies an invalid value for a parameter?",
+    "top": []
+   },
+   {
+    "id": "click-06",
+    "question": "How do I ask the user to confirm before doing something destructive?",
+    "top": []
+   },
+   {
+    "id": "click-08",
+    "question": "How is the help text wrapped and laid out in columns?",
+    "top": []
+   },
+   {
+    "id": "click-10",
+    "question": "Where are parameter types such as integer ranges and fixed choices converted and validated?",
+    "top": [
+     "CHANGES.md"
+    ]
+   },
+   {
+    "id": "express-01",
+    "question": "How does the framework send a JSON response with the correct content type?",
+    "top": []
+   },
+   {
+    "id": "express-02",
+    "question": "How are cookies set and removed on a response?",
+    "top": [
+     "History.md"
+    ]
+   },
+   {
+    "id": "express-03",
+    "question": "How does it work out which content type the client prefers?",
+    "top": []
+   },
+   {
+    "id": "express-04",
+    "question": "How do routes and middleware get registered on an application for each HTTP verb?",
+    "top": []
+   },
+   {
+    "id": "express-05",
+    "question": "How are template engines looked up and used to render a view?",
+    "top": [
+     "History.md"
+    ]
+   },
+   {
+    "id": "express-06",
+    "question": "How is the client's IP address determined when running behind a proxy?",
+    "top": []
+   },
+   {
+    "id": "express-07",
+    "question": "How can I send a file to the browser as a download with a chosen filename?",
+    "top": []
+   },
+   {
+    "id": "express-08",
+    "question": "How does the main factory function create an app and mix in the request and response prototypes?",
+    "top": []
+   },
+   {
+    "id": "express-09",
+    "question": "How do I redirect a client to a different address?",
+    "top": [
+     "History.md"
+    ]
+   },
+   {
+    "id": "cobra-01",
+    "question": "How do I require that certain flags are set together or can never be combined?",
+    "top": []
+   },
+   {
+    "id": "cobra-03",
+    "question": "How are positional arguments validated, for example requiring exactly a given number?",
+    "top": []
+   },
+   {
+    "id": "cobra-04",
+    "question": "How do I produce a bash completion script for a CLI?",
+    "top": [
+     "command.go"
+    ]
+   },
+   {
+    "id": "cobra-05",
+    "question": "How do I offer dynamically computed suggestions for a flag's value?",
+    "top": []
+   },
+   {
+    "id": "cobra-07",
+    "question": "How can I override the help or usage output with my own template?",
+    "top": []
+   },
+   {
+    "id": "cobra-08",
+    "question": "How do I write markdown documentation for an entire command tree?",
+    "top": [
+     "site/content/docgen/md.md",
+     "site/content/docgen/_index.md"
+    ]
+   },
+   {
+    "id": "cobra-09",
+    "question": "How do I run setup and teardown logic before and after a command executes?",
+    "top": []
+   }
+  ],
+  "seconds": 184.1,
+  "top5": {
+   "click-01": [
+    "docs/options.md",
+    "docs/commands.md",
+    "docs/commands-and-groups.md",
+    "docs/documentation.md",
+    "docs/faqs.md"
+   ],
+   "click-02": [
+    "CHANGES.md",
+    "src/click/core.py"
+   ],
+   "click-03": [
+    "CHANGES.md",
+    "src/click/_termui_impl.py"
+   ],
+   "click-04": [
+    "CHANGES.md",
+    "tests/test_shell_completion.py"
+   ],
+   "click-05": [],
+   "click-06": [],
+   "click-07": [
+    "CHANGES.md",
+    "src/click/core.py"
+   ],
+   "click-08": [],
+   "click-09": [
+    "docs/options.md",
+    "docs/why.md",
+    "CHANGES.md",
+    "src/click/types.py",
+    "src/click/core.py"
+   ],
+   "click-10": [
+    "CHANGES.md"
+   ],
+   "express-01": [],
+   "express-02": [
+    "History.md"
+   ],
+   "express-03": [],
+   "express-04": [],
+   "express-05": [
+    "History.md"
+   ],
+   "express-06": [],
+   "express-07": [],
+   "express-08": [],
+   "express-09": [
+    "History.md"
+   ],
+   "express-10": [
+    "History.md"
+   ],
+   "cobra-01": [],
+   "cobra-02": [
+    "doc/man_docs.go"
+   ],
+   "cobra-03": [],
+   "cobra-04": [
+    "command.go"
+   ],
+   "cobra-05": [],
+   "cobra-06": [
+    "site/content/user_guide.md",
+    "command.go",
+    "completions.go",
+    "completions_test.go",
+    "command_test.go"
+   ],
+   "cobra-07": [],
+   "cobra-08": [
+    "site/content/docgen/md.md",
+    "site/content/docgen/_index.md"
+   ],
+   "cobra-09": [],
+   "cobra-10": [
+    "powershell_completions.go",
+    "site/content/completions/_index.md",
+    "completions.go",
+    "site/content/user_guide.md"
+   ]
+  }
+ }
+}

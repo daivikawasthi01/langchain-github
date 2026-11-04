@@ -1,0 +1,113 @@
+{
+ "github_lexical_raw": {
+  "issues": {
+   "n": 20,
+   "hit@1": 0.0,
+   "hit@5": 0.0,
+   "mrr": 0.0
+  }
+ },
+ "github_lexical_keywords": {
+  "issues": {
+   "n": 20,
+   "hit@1": 0.0,
+   "hit@5": 0.0,
+   "mrr": 0.0
+  }
+ },
+ "github_hybrid": {
+  "issues": {
+   "n": 20,
+   "hit@1": 0.85,
+   "hit@5": 0.9,
+   "mrr": 0.875
+  }
+ },
+ "ours_index": {
+  "issues": {
+   "n": 20,
+   "hit@1": 0.85,
+   "hit@5": 1.0,
+   "mrr": 0.9099999999999999
+  },
+  "all": {
+   "n": 26,
+   "hit@1": 0.7307692307692307,
+   "hit@5": 0.9615384615384616,
+   "mrr": 0.8346153846153845
+  }
+ },
+ "ours_search": {
+  "issues": {
+   "n": 20,
+   "hit@1": 0.85,
+   "hit@5": 0.9,
+   "mrr": 0.875
+  }
+ },
+ "resolution_accuracy": {
+  "ours_index": {
+   "top1_hits": 17,
+   "resolution_accuracy": 1.0
+  },
+  "ours_search": {
+   "top1_hits": 17,
+   "resolution_accuracy": 1.0
+  }
+ },
+ "misses": {
+  "github_lexical_raw": [
+   "issue-pool",
+   "issue-stream_timeout",
+   "issue-proxy_redirect",
+   "issue-post_retry",
+   "issue-http3",
+   "issue-corp_cert",
+   "issue-json_memory",
+   "issue-cookie_persist",
+   "issue-filename_unicode",
+   "issue-async_cancel",
+   "issue-dns_cache",
+   "issue-gzip_trailing",
+   "issue-basic_auth",
+   "issue-retry_after",
+   "issue-win_timeout",
+   "issue-py313_warning",
+   "issue-ipv6",
+   "issue-big_upload",
+   "issue-metrics",
+   "issue-no_proxy_cidr"
+  ],
+  "github_lexical_keywords": [
+   "issue-pool",
+   "issue-stream_timeout",
+   "issue-proxy_redirect",
+   "issue-post_retry",
+   "issue-http3",
+   "issue-corp_cert",
+   "issue-json_memory",
+   "issue-cookie_persist",
+   "issue-filename_unicode",
+   "issue-async_cancel",
+   "issue-dns_cache",
+   "issue-gzip_trailing",
+   "issue-basic_auth",
+   "issue-retry_after",
+   "issue-win_timeout",
+   "issue-py313_warning",
+   "issue-ipv6",
+   "issue-big_upload",
+   "issue-metrics",
+   "issue-no_proxy_cidr"
+  ],
+  "github_hybrid": [
+   "issue-cookie_persist",
+   "issue-filename_unicode"
+  ],
+  "ours_index": [],
+  "ours_search": [
+   "issue-cookie_persist",
+   "issue-filename_unicode"
+  ]
+ }
+}

@@ -1,0 +1,1032 @@
+{
+ "naive_bm25": {
+  "hit@1": 0.4,
+  "hit@5": 0.967,
+  "mrr": 0.602,
+  "by_repo_hit@5": {
+   "pallets/click": 1,
+   "expressjs/express": 1,
+   "spf13/cobra": 0.9
+  },
+  "misses": [
+   {
+    "id": "cobra-08",
+    "question": "How do I write markdown documentation for an entire command tree?",
+    "top": [
+     "site/content/docgen/md.md",
+     "site/content/docgen/rest.md",
+     "site/content/docgen/yaml.md",
+     "doc/rest_docs_test.go",
+     "site/content/docgen/_index.md"
+    ]
+   }
+  ],
+  "seconds": 0.1,
+  "top5": {
+   "click-01": [
+    "docs/commands-and-groups.md",
+    "docs/options.md",
+    "docs/faqs.md",
+    "src/click/core.py",
+    "docs/arguments.md"
+   ],
+   "click-02": [
+    "docs/exceptions.md",
+    "tests/test_testing.py",
+    "tests/test_stream_lifecycle.py",
+    "docs/documentation.md",
+    "docs/testing.md"
+   ],
+   "click-03": [
+    "docs/utils.md",
+    "src/click/termui.py",
+    "tests/test_termui.py",
+    "src/click/parser.py",
+    "tests/test_commands.py"
+   ],
+   "click-04": [
+    "examples/completion/README",
+    "docs/shell-completion.md",
+    "tests/test_shell_completion.py",
+    "CHANGES.md",
+    "src/click/shell_completion.py"
+   ],
+   "click-05": [
+    "docs/exceptions.md",
+    "src/click/exceptions.py",
+    "tests/test_options.py",
+    "src/click/shell_completion.py",
+    "tests/test_arguments.py"
+   ],
+   "click-06": [
+    "docs/prompts.md",
+    "docs/why.md",
+    "docs/exceptions.md",
+    "docs/virtualenv.md",
+    "docs/click-concepts.md"
+   ],
+   "click-07": [
+    "examples/imagepipe/imagepipe.py",
+    "docs/documentation.md",
+    "src/click/core.py",
+    "docs/commands.md",
+    "CHANGES.md"
+   ],
+   "click-08": [
+    "CHANGES.md",
+    "tests/test_formatting.py",
+    "docs/documentation.md",
+    "src/click/formatting.py",
+    "tests/test_commands.py"
+   ],
+   "click-09": [
+    "src/click/types.py",
+    "docs/utils.md",
+    "examples/inout/README",
+    "docs/unicode-support.md",
+    "docs/faqs.md"
+   ],
+   "click-10": [
+    "src/click/types.py",
+    "CHANGES.md",
+    "docs/parameter-types.md",
+    "src/click/decorators.py",
+    "src/click/parser.py"
+   ],
+   "express-01": [
+    "lib/response.js",
+    "test/express.json.js",
+    "Readme.md",
+    "test/support/utils.js",
+    "test/res.format.js"
+   ],
+   "express-02": [
+    "History.md",
+    "examples/README.md",
+    "examples/cookies/index.js",
+    ".github/workflows/scorecard.yml",
+    "lib/response.js"
+   ],
+   "express-03": [
+    "test/express.urlencoded.js",
+    "lib/response.js",
+    "test/express.text.js",
+    "test/res.download.js",
+    "History.md"
+   ],
+   "express-04": [
+    "examples/README.md",
+    "lib/application.js",
+    "examples/view-locals/index.js",
+    "examples/error/index.js",
+    "lib/response.js"
+   ],
+   "express-05": [
+    "lib/application.js",
+    "History.md",
+    "Readme.md",
+    "lib/response.js",
+    "test/app.render.js"
+   ],
+   "express-06": [
+    "lib/request.js",
+    "test/req.ip.js",
+    "test/req.ips.js",
+    "History.md",
+    "lib/response.js"
+   ],
+   "express-07": [
+    "lib/response.js",
+    "lib/view.js",
+    "lib/application.js",
+    ".github/workflows/codeql.yml",
+    "History.md"
+   ],
+   "express-08": [
+    "lib/express.js",
+    "lib/application.js",
+    "lib/response.js",
+    "test/support/utils.js",
+    "examples/vhost/index.js"
+   ],
+   "express-09": [
+    "lib/response.js",
+    "lib/application.js",
+    "lib/request.js",
+    "test/req.ip.js",
+    "examples/view-locals/index.js"
+   ],
+   "express-10": [
+    ".github/workflows/npm-publish.yml",
+    ".github/dependabot.yml",
+    "History.md",
+    "examples/error/index.js",
+    "examples/downloads/files/amazing.txt"
+   ],
+   "cobra-01": [
+    "site/content/user_guide.md",
+    "flag_groups.go",
+    "completions_test.go",
+    "completions.go",
+    "site/content/completions/_index.md"
+   ],
+   "cobra-02": [
+    "doc/man_docs.go",
+    "site/content/docgen/md.md",
+    "site/content/docgen/rest.md",
+    "site/content/docgen/man.md",
+    "completions.go"
+   ],
+   "cobra-03": [
+    "site/content/user_guide.md",
+    "args_test.go",
+    "args.go",
+    "command.go",
+    "README.md"
+   ],
+   "cobra-04": [
+    "site/content/completions/_index.md",
+    "completions.go",
+    "site/content/user_guide.md",
+    "bash_completions.go",
+    "shell_completions.go"
+   ],
+   "cobra-05": [
+    "command.go",
+    "doc/util.go",
+    "completions.go",
+    "doc/rest_docs_test.go",
+    "command_test.go"
+   ],
+   "cobra-06": [
+    "site/content/user_guide.md",
+    "doc/md_docs_test.go",
+    "completions.go",
+    "command.go",
+    "site/content/completions/_index.md"
+   ],
+   "cobra-07": [
+    "site/content/user_guide.md",
+    "completions_test.go",
+    "cobra.go",
+    "site/content/completions/_index.md",
+    "command.go"
+   ],
+   "cobra-08": [
+    "site/content/docgen/md.md",
+    "site/content/docgen/rest.md",
+    "site/content/docgen/yaml.md",
+    "doc/rest_docs_test.go",
+    "site/content/docgen/_index.md"
+   ],
+   "cobra-09": [
+    "site/content/user_guide.md",
+    "bash_completionsV2.go",
+    "flag_groups.go",
+    "command.go",
+    "doc/util.go"
+   ],
+   "cobra-10": [
+    "site/content/completions/_index.md",
+    "completions.go",
+    "powershell_completions.go",
+    "README.md",
+    "command.go"
+   ]
+  }
+ },
+ "naive_vec": {
+  "hit@1": 0.267,
+  "hit@5": 0.767,
+  "mrr": 0.484,
+  "by_repo_hit@5": {
+   "pallets/click": 0.7,
+   "expressjs/express": 0.8,
+   "spf13/cobra": 0.8
+  },
+  "misses": [
+   {
+    "id": "click-02",
+    "question": "How do I write tests that invoke a command and capture what it prints?",
+    "top": [
+     "tests/test_options.py",
+     "tests/test_utils/test_confirm.py",
+     "tests/test_arguments.py",
+     "tests/test_command_decorators.py",
+     "tests/test_commands.py"
+    ]
+   },
+   {
+    "id": "click-05",
+    "question": "Which exception is raised when a user supplies an invalid value for a parameter?",
+    "top": [
+     "tests/test_basic.py",
+     "src/click/core.py",
+     "tests/test_termui.py",
+     "tests/test_testing.py",
+     "tests/test_types/test_FuncParamType.py"
+    ]
+   },
+   {
+    "id": "click-08",
+    "question": "How is the help text wrapped and laid out in columns?",
+    "top": [
+     "src/click/core.py",
+     "tests/test_formatting.py",
+     "CHANGES.md",
+     "docs/documentation.md",
+     "tests/test_options.py"
+    ]
+   },
+   {
+    "id": "express-02",
+    "question": "How are cookies set and removed on a response?",
+    "top": [
+     "test/acceptance/cookies.js",
+     "test/res.append.js",
+     "test/acceptance/cookie-sessions.js",
+     "test/res.set.js",
+     "test/res.clearCookie.js"
+    ]
+   },
+   {
+    "id": "express-03",
+    "question": "How does it work out which content type the client prefers?",
+    "top": [
+     "test/express.urlencoded.js",
+     "test/req.accepts.js",
+     "test/express.json.js",
+     "test/express.text.js",
+     "test/req.is.js"
+    ]
+   },
+   {
+    "id": "cobra-05",
+    "question": "How do I offer dynamically computed suggestions for a flag's value?",
+    "top": [
+     "site/content/completions/zsh.md",
+     "command_test.go",
+     "bash_completions.go",
+     "command.go",
+     "completions_test.go"
+    ]
+   },
+   {
+    "id": "cobra-09",
+    "question": "How do I run setup and teardown logic before and after a command executes?",
+    "top": [
+     "site/content/user_guide.md",
+     "command_test.go",
+     "bash_completions.go",
+     "zsh_completions.go",
+     "completions_test.go"
+    ]
+   }
+  ],
+  "seconds": 311.4,
+  "top5": {
+   "click-01": [
+    "docs/prompts.md",
+    "docs/options.md",
+    "src/click/core.py",
+    "CHANGES.md",
+    "tests/test_context.py"
+   ],
+   "click-02": [
+    "tests/test_options.py",
+    "tests/test_utils/test_confirm.py",
+    "tests/test_arguments.py",
+    "tests/test_command_decorators.py",
+    "tests/test_commands.py"
+   ],
+   "click-03": [
+    "docs/utils.md",
+    "src/click/termui.py",
+    "examples/termui/termui.py",
+    "src/click/_termui_impl.py",
+    "tests/test_termui.py"
+   ],
+   "click-04": [
+    "examples/completion/README",
+    "docs/shell-completion.md",
+    "src/click/shell_completion.py",
+    "tests/test_shell_completion.py",
+    "CHANGES.md"
+   ],
+   "click-05": [
+    "tests/test_basic.py",
+    "src/click/core.py",
+    "tests/test_termui.py",
+    "tests/test_testing.py",
+    "tests/test_types/test_FuncParamType.py"
+   ],
+   "click-06": [
+    "src/click/termui.py",
+    "docs/prompts.md",
+    "docs/option-decorators.md",
+    "tests/test_termui.py",
+    "src/click/core.py"
+   ],
+   "click-07": [
+    "docs/commands.md",
+    "docs/commands-and-groups.md",
+    "docs/quickstart.md",
+    "tests/test_commands.py",
+    "src/click/core.py"
+   ],
+   "click-08": [
+    "src/click/core.py",
+    "tests/test_formatting.py",
+    "CHANGES.md",
+    "docs/documentation.md",
+    "tests/test_options.py"
+   ],
+   "click-09": [
+    "tests/test_arguments.py",
+    "src/click/types.py",
+    "tests/test_info_dict.py",
+    "tests/test_shell_completion.py",
+    "tests/test_utils/test_open_file.py"
+   ],
+   "click-10": [
+    "docs/parameter-types.md",
+    "src/click/types.py",
+    "tests/typing/typing_prompt.py",
+    "tests/test_options.py",
+    "tests/test_types/test_convert_type.py"
+   ],
+   "express-01": [
+    "test/res.json.js",
+    "test/req.is.js",
+    "test/express.json.js",
+    "lib/response.js",
+    "test/res.send.js"
+   ],
+   "express-02": [
+    "test/acceptance/cookies.js",
+    "test/res.append.js",
+    "test/acceptance/cookie-sessions.js",
+    "test/res.set.js",
+    "test/res.clearCookie.js"
+   ],
+   "express-03": [
+    "test/express.urlencoded.js",
+    "test/req.accepts.js",
+    "test/express.json.js",
+    "test/express.text.js",
+    "test/req.is.js"
+   ],
+   "express-04": [
+    "test/app.router.js",
+    "examples/mvc/lib/boot.js",
+    "examples/README.md",
+    "lib/application.js",
+    "examples/view-locals/index.js"
+   ],
+   "express-05": [
+    "test/app.render.js",
+    "lib/application.js",
+    "lib/view.js",
+    "test/res.render.js",
+    "examples/markdown/views/index.md"
+   ],
+   "express-06": [
+    "test/req.ip.js",
+    "test/req.ips.js",
+    "lib/request.js",
+    "test/req.secure.js",
+    "test/req.protocol.js"
+   ],
+   "express-07": [
+    "lib/response.js",
+    "test/res.download.js",
+    "test/acceptance/downloads.js",
+    "test/res.attachment.js",
+    "examples/downloads/index.js"
+   ],
+   "express-08": [
+    "lib/express.js",
+    "test/app.response.js",
+    "test/exports.js",
+    "test/express.text.js",
+    "test/acceptance/hello-world.js"
+   ],
+   "express-09": [
+    "test/express.static.js",
+    "test/req.ip.js",
+    "test/res.redirect.js",
+    "lib/response.js",
+    "lib/request.js"
+   ],
+   "express-10": [
+    "History.md",
+    ".github/workflows/npm-publish.yml",
+    "test/express.static.js"
+   ],
+   "cobra-01": [
+    "site/content/user_guide.md",
+    "flag_groups_test.go",
+    "completions_test.go",
+    "flag_groups.go",
+    "site/content/completions/zsh.md"
+   ],
+   "cobra-02": [
+    "site/content/docgen/man.md",
+    "site/content/docgen/_index.md",
+    "doc/man_docs.go",
+    "doc/rest_docs.go",
+    "command.go"
+   ],
+   "cobra-03": [
+    "site/content/user_guide.md",
+    "args_test.go",
+    "args.go",
+    "flag_groups_test.go",
+    "completions_test.go"
+   ],
+   "cobra-04": [
+    "site/content/completions/_index.md",
+    "completions.go",
+    "bash_completions.go",
+    "site/content/completions/zsh.md",
+    "site/content/completions/bash.md"
+   ],
+   "cobra-05": [
+    "site/content/completions/zsh.md",
+    "command_test.go",
+    "bash_completions.go",
+    "command.go",
+    "completions_test.go"
+   ],
+   "cobra-06": [
+    "command_test.go",
+    "command.go",
+    "completions.go",
+    "flag_groups_test.go",
+    "completions_test.go"
+   ],
+   "cobra-07": [
+    "site/content/user_guide.md",
+    "command.go",
+    "command_test.go",
+    "cobra_test.go",
+    "site/content/docgen/md.md"
+   ],
+   "cobra-08": [
+    "doc/md_docs.go",
+    "site/content/docgen/md.md",
+    "doc/rest_docs.go",
+    "completions_test.go",
+    "command.go"
+   ],
+   "cobra-09": [
+    "site/content/user_guide.md",
+    "command_test.go",
+    "bash_completions.go",
+    "zsh_completions.go",
+    "completions_test.go"
+   ],
+   "cobra-10": [
+    "site/content/completions/_index.md",
+    "site/content/completions/powershell.md",
+    "completions.go",
+    "powershell_completions.go",
+    "completions_test.go"
+   ]
+  }
+ },
+ "ours_bm25": {
+  "hit@1": 0.3,
+  "hit@5": 0.9,
+  "mrr": 0.553,
+  "by_repo_hit@5": {
+   "pallets/click": 1,
+   "expressjs/express": 0.9,
+   "spf13/cobra": 0.8
+  },
+  "misses": [
+   {
+    "id": "express-03",
+    "question": "How does it work out which content type the client prefers?",
+    "top": [
+     "examples/README.md",
+     "examples/search/public/client.js",
+     "test/express.urlencoded.js",
+     "test/express.text.js",
+     "test/express.json.js"
+    ]
+   },
+   {
+    "id": "cobra-01",
+    "question": "How do I require that certain flags are set together or can never be combined?",
+    "top": [
+     "site/content/user_guide.md",
+     "completions.go",
+     "cobra_test.go",
+     "site/content/completions/_index.md",
+     "completions_test.go"
+    ]
+   },
+   {
+    "id": "cobra-05",
+    "question": "How do I offer dynamically computed suggestions for a flag's value?",
+    "top": [
+     "command.go",
+     "command_test.go",
+     "site/content/completions/_index.md",
+     "site/content/active_help.md",
+     "powershell_completions.go"
+    ]
+   }
+  ],
+  "seconds": 26.1,
+  "top5": {
+   "click-01": [
+    "docs/options.md",
+    "docs/arguments.md",
+    "src/click/core.py",
+    "docs/commands-and-groups.md",
+    "docs/commands.md"
+   ],
+   "click-02": [
+    "tests/test_testing.py",
+    "docs/testing.md",
+    "src/click/testing.py",
+    "tests/test_commands.py",
+    "docs/arguments.md"
+   ],
+   "click-03": [
+    "docs/utils.md",
+    "src/click/termui.py",
+    "src/click/parser.py",
+    "tests/test_termui.py",
+    "examples/termui/termui.py"
+   ],
+   "click-04": [
+    "examples/completion/README",
+    "docs/shell-completion.md",
+    "tests/test_shell_completion.py",
+    "src/click/shell_completion.py",
+    "CHANGES.md"
+   ],
+   "click-05": [
+    "docs/exceptions.md",
+    "tests/test_termui.py",
+    "docs/options.md",
+    "docs/prompts.md",
+    "CHANGES.md"
+   ],
+   "click-06": [
+    "docs/prompts.md",
+    "docs/exceptions.md",
+    "tests/test_termui.py",
+    "src/click/termui.py",
+    "docs/advanced.md"
+   ],
+   "click-07": [
+    "docs/documentation.md",
+    "src/click/core.py",
+    "docs/commands.md",
+    "examples/imagepipe/imagepipe.py",
+    "docs/commands-and-groups.md"
+   ],
+   "click-08": [
+    "docs/documentation.md",
+    "tests/test_arguments.py",
+    "src/click/formatting.py",
+    "tests/test_utils/test_echo.py",
+    "tests/test_formatting.py"
+   ],
+   "click-09": [
+    "docs/prompts.md",
+    "tests/test_arguments.py",
+    "examples/inout/README",
+    "src/click/types.py",
+    "docs/wincmd.md"
+   ],
+   "click-10": [
+    "docs/parameter-types.md",
+    "tests/test_info_dict.py",
+    "src/click/types.py",
+    "src/click/__init__.py",
+    "examples/validation/validation.py"
+   ],
+   "express-01": [
+    "test/express.json.js",
+    "lib/response.js",
+    "package.json",
+    "test/res.format.js",
+    "History.md"
+   ],
+   "express-02": [
+    "History.md",
+    "test/acceptance/cookies.js",
+    "examples/cookies/index.js",
+    "test/req.signedCookies.js",
+    "lib/response.js"
+   ],
+   "express-03": [
+    "examples/README.md",
+    "examples/search/public/client.js",
+    "test/express.urlencoded.js",
+    "test/express.text.js",
+    "test/express.json.js"
+   ],
+   "express-04": [
+    "lib/application.js",
+    "examples/README.md",
+    "test/Router.js",
+    "test/Route.js",
+    "examples/error-pages/index.js"
+   ],
+   "express-05": [
+    "examples/view-constructor/github-view.js",
+    "test/app.render.js",
+    "lib/application.js",
+    "test/res.render.js",
+    "test/app.engine.js"
+   ],
+   "express-06": [
+    "test/req.ip.js",
+    "lib/request.js",
+    "test/req.ips.js",
+    "History.md",
+    "examples/search/index.js"
+   ],
+   "express-07": [
+    "lib/response.js",
+    "test/res.download.js",
+    "test/acceptance/downloads.js",
+    "History.md",
+    "test/res.attachment.js"
+   ],
+   "express-08": [
+    "lib/express.js",
+    "examples/vhost/index.js",
+    "test/exports.js",
+    "lib/application.js",
+    "examples/mvc/controllers/main/index.js"
+   ],
+   "express-09": [
+    "test/req.ip.js",
+    "lib/request.js",
+    "lib/response.js",
+    "test/req.ips.js",
+    "test/app.listen.js"
+   ],
+   "express-10": [
+    ".github/workflows/npm-publish.yml",
+    "test/support/utils.js",
+    "History.md",
+    ".github/dependabot.yml",
+    "examples/mvc/lib/boot.js"
+   ],
+   "cobra-01": [
+    "site/content/user_guide.md",
+    "completions.go",
+    "cobra_test.go",
+    "site/content/completions/_index.md",
+    "completions_test.go"
+   ],
+   "cobra-02": [
+    "doc/man_docs.go",
+    "site/content/docgen/md.md",
+    "site/content/docgen/rest.md",
+    "site/content/docgen/man.md",
+    "doc/rest_docs.go"
+   ],
+   "cobra-03": [
+    "site/content/user_guide.md",
+    "args_test.go",
+    "args.go",
+    "site/content/completions/zsh.md",
+    "command.go"
+   ],
+   "cobra-04": [
+    "site/content/completions/_index.md",
+    "site/content/user_guide.md",
+    "completions.go",
+    "completions_test.go",
+    "bash_completions.go"
+   ],
+   "cobra-05": [
+    "command.go",
+    "command_test.go",
+    "site/content/completions/_index.md",
+    "site/content/active_help.md",
+    "powershell_completions.go"
+   ],
+   "cobra-06": [
+    "site/content/user_guide.md",
+    "command.go",
+    "doc/md_docs_test.go",
+    "command_test.go",
+    "doc/man_docs_test.go"
+   ],
+   "cobra-07": [
+    "site/content/user_guide.md",
+    "command.go",
+    "command_test.go",
+    "cobra.go",
+    "completions_test.go"
+   ],
+   "cobra-08": [
+    "site/content/docgen/md.md",
+    "doc/md_docs.go",
+    "site/content/docgen/rest.md",
+    "site/content/docgen/yaml.md",
+    "doc/md_docs_test.go"
+   ],
+   "cobra-09": [
+    "site/content/user_guide.md",
+    "command.go",
+    "command_test.go",
+    "completions.go",
+    "completions_test.go"
+   ],
+   "cobra-10": [
+    "site/content/completions/_index.md",
+    "site/content/completions/powershell.md",
+    "powershell_completions.go",
+    "completions.go",
+    "site/content/user_guide.md"
+   ]
+  }
+ },
+ "ours_hybrid": {
+  "hit@1": 0.467,
+  "hit@5": 0.967,
+  "mrr": 0.671,
+  "by_repo_hit@5": {
+   "pallets/click": 1,
+   "expressjs/express": 0.9,
+   "spf13/cobra": 1
+  },
+  "misses": [
+   {
+    "id": "express-03",
+    "question": "How does it work out which content type the client prefers?",
+    "top": [
+     "test/express.text.js",
+     "History.md",
+     "test/res.type.js",
+     "examples/search/public/client.js",
+     "test/express.json.js"
+    ]
+   }
+  ],
+  "seconds": 407.6,
+  "top5": {
+   "click-01": [
+    "docs/options.md",
+    "docs/prompts.md",
+    "src/click/core.py",
+    "docs/commands-and-groups.md",
+    "docs/documentation.md"
+   ],
+   "click-02": [
+    "tests/test_commands.py",
+    "tests/test_testing.py",
+    "tests/test_stream_lifecycle.py",
+    "docs/testing.md",
+    "tests/test_arguments.py"
+   ],
+   "click-03": [
+    "docs/utils.md",
+    "src/click/termui.py",
+    "examples/termui/termui.py",
+    "tests/test_termui.py",
+    "src/click/_termui_impl.py"
+   ],
+   "click-04": [
+    "examples/completion/README",
+    "docs/shell-completion.md",
+    "src/click/shell_completion.py",
+    "tests/test_shell_completion.py",
+    "CHANGES.md"
+   ],
+   "click-05": [
+    "src/click/exceptions.py",
+    "tests/test_arguments.py",
+    "tests/test_options.py",
+    "CHANGES.md",
+    "docs/exceptions.md"
+   ],
+   "click-06": [
+    "docs/prompts.md",
+    "src/click/termui.py",
+    "tests/test_termui.py",
+    "docs/option-decorators.md",
+    "src/click/decorators.py"
+   ],
+   "click-07": [
+    "docs/commands.md",
+    "src/click/core.py",
+    "docs/commands-and-groups.md",
+    "docs/documentation.md",
+    "tests/test_commands.py"
+   ],
+   "click-08": [
+    "tests/test_arguments.py",
+    "docs/documentation.md",
+    "src/click/formatting.py",
+    "src/click/core.py",
+    "tests/test_formatting.py"
+   ],
+   "click-09": [
+    "tests/test_arguments.py",
+    "src/click/types.py",
+    "tests/test_utils/test_open_file.py",
+    "tests/test_utils/test_echo.py",
+    "CHANGES.md"
+   ],
+   "click-10": [
+    "docs/parameter-types.md",
+    "src/click/types.py",
+    "examples/validation/validation.py",
+    "tests/test_info_dict.py",
+    "CHANGES.md"
+   ],
+   "express-01": [
+    "lib/response.js",
+    "test/express.json.js",
+    "test/req.is.js",
+    "test/res.json.js",
+    "test/res.jsonp.js"
+   ],
+   "express-02": [
+    "test/acceptance/cookies.js",
+    "examples/cookies/index.js",
+    "lib/response.js",
+    "test/req.signedCookies.js",
+    "History.md"
+   ],
+   "express-03": [
+    "test/express.text.js",
+    "History.md",
+    "test/res.type.js",
+    "examples/search/public/client.js",
+    "test/express.json.js"
+   ],
+   "express-04": [
+    "test/Router.js",
+    "examples/README.md",
+    "lib/application.js",
+    "History.md",
+    "examples/web-service/index.js"
+   ],
+   "express-05": [
+    "test/app.render.js",
+    "examples/view-constructor/github-view.js",
+    "test/app.engine.js",
+    "lib/application.js",
+    "test/res.render.js"
+   ],
+   "express-06": [
+    "test/req.ip.js",
+    "lib/request.js",
+    "test/req.ips.js",
+    "History.md",
+    "lib/application.js"
+   ],
+   "express-07": [
+    "lib/response.js",
+    "test/res.download.js",
+    "test/acceptance/downloads.js",
+    "examples/downloads/index.js",
+    "test/res.attachment.js"
+   ],
+   "express-08": [
+    "lib/express.js",
+    "test/exports.js",
+    "test/app.response.js",
+    "lib/application.js",
+    "test/app.request.js"
+   ],
+   "express-09": [
+    "test/req.ip.js",
+    "lib/response.js",
+    "test/res.location.js",
+    "lib/request.js",
+    "test/res.redirect.js"
+   ],
+   "express-10": [
+    "History.md",
+    ".github/workflows/npm-publish.yml",
+    ".github/dependabot.yml",
+    ".github/workflows/legacy.yml",
+    "test/support/utils.js"
+   ],
+   "cobra-01": [
+    "site/content/user_guide.md",
+    "flag_groups.go",
+    "completions.go",
+    "flag_groups_test.go",
+    "completions_test.go"
+   ],
+   "cobra-02": [
+    "doc/man_docs.go",
+    "site/content/docgen/man.md",
+    "doc/rest_docs.go",
+    "site/content/docgen/rest.md",
+    "site/content/docgen/md.md"
+   ],
+   "cobra-03": [
+    "site/content/user_guide.md",
+    "args.go",
+    "args_test.go",
+    "command.go",
+    "site/content/completions/_index.md"
+   ],
+   "cobra-04": [
+    "site/content/completions/_index.md",
+    "completions.go",
+    "bash_completionsV2.go",
+    "bash_completions.go",
+    "site/content/completions/bash.md"
+   ],
+   "cobra-05": [
+    "site/content/user_guide.md",
+    "command_test.go",
+    "bash_completions.go",
+    "command.go",
+    "completions.go"
+   ],
+   "cobra-06": [
+    "command.go",
+    "site/content/user_guide.md",
+    "command_test.go",
+    "completions.go",
+    "doc/man_docs_test.go"
+   ],
+   "cobra-07": [
+    "command.go",
+    "site/content/user_guide.md",
+    "command_test.go",
+    "completions_test.go",
+    "site/content/docgen/yaml.md"
+   ],
+   "cobra-08": [
+    "site/content/docgen/md.md",
+    "doc/md_docs.go",
+    "doc/rest_docs.go",
+    "bash_completions.go",
+    "doc/man_docs.go"
+   ],
+   "cobra-09": [
+    "command.go",
+    "completions.go",
+    "site/content/user_guide.md",
+    "site/content/completions/_index.md",
+    "completions_test.go"
+   ],
+   "cobra-10": [
+    "completions.go",
+    "site/content/completions/_index.md",
+    "site/content/completions/powershell.md",
+    "powershell_completions.go",
+    "powershell_completions_test.go"
+   ]
+  }
+ }
+}
