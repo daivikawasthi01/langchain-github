@@ -11,10 +11,27 @@ from langchain_core.documents import Document
 
 from ._client import GitHubClient, GitHubError, GitHubGraphQLError, GitHubNotFoundError
 
-_CLOSES = re.compile(
-    r"\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s*:?\s+(?:[\w.-]+/[\w.-]+)?#(\d+)", re.I
+# "fixes #12", "closes owner/name#12" and "resolves https://github.com/owner/name/issues/12".
+_REF = (
+    r"(?:(?P<slug>[\w.-]+/[\w.-]+)#|https?://[^/\s]+/(?P<url>[\w.-]+/[\w.-]+)/issues/|#)"
+    r"(?P<num>\d+)"
 )
-_DUPLICATE = re.compile(r"\bduplicate\s+of\s+(?:[\w.-]+/[\w.-]+)?#(\d+)", re.I)
+_CLOSES = re.compile(r"\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s*:?\s+" + _REF, re.I)
+_DUPLICATE = re.compile(r"\bduplicate\s+of\s+" + _REF, re.I)
+_REPO_IN_URL = re.compile(r"^https?://[^/]+/([^/]+/[^/]+)/(?:issues|pull|discussions)/\d+")
+
+
+def repo_of_url(url: str) -> str | None:
+    """``owner/name`` from an issue, pull request or discussion web URL."""
+    m = _REPO_IN_URL.match(url or "")
+    return m.group(1) if m else None
+
+
+def _same_repo(match: re.Match[str], repo: str | None) -> bool:
+    """True if the reference points at ``repo`` (references without an owner always do)."""
+    named = match.group("slug") or match.group("url")
+    return named is None or repo is None or named.lower() == repo.lower()
+
 
 _DISCUSSIONS_QUERY = """
 query($owner: String!, $name: String!, $after: String) {
@@ -71,22 +88,27 @@ class Thread:
         return "fixed" if self.resolved_by else "answered"
 
 
-def closing_references(text: str | None) -> list[int]:
-    return [int(n) for n in _CLOSES.findall(text or "")]
+def closing_references(text: str | None, repo: str | None = None) -> list[int]:
+    """Issue numbers ``text`` says it closes; with ``repo``, other repositories are ignored."""
+    return [int(m.group("num")) for m in _CLOSES.finditer(text or "") if _same_repo(m, repo)]
 
 
-def duplicate_target(text: str | None) -> int | None:
-    m = _DUPLICATE.search(text or "")
-    return int(m.group(1)) if m else None
+def duplicate_target(text: str | None, repo: str | None = None) -> int | None:
+    """The issue number ``text`` says it duplicates (the first one in ``repo``)."""
+    for m in _DUPLICATE.finditer(text or ""):
+        if _same_repo(m, repo):
+            return int(m.group("num"))
+    return None
 
 
 def build_issue_thread(
     issue: dict[str, Any], comments: list[dict[str, Any]], merged_prs: list[int]
 ) -> Thread:
     dup = None
+    repo = repo_of_url(issue.get("html_url", ""))
     if issue.get("state") == "closed":
         for c in comments:
-            dup = duplicate_target(c.get("body")) or dup
+            dup = duplicate_target(c.get("body"), repo) or dup
     return Thread(
         kind="issue",
         number=issue["number"],
@@ -159,7 +181,7 @@ def merged_pr_closers(client: GitHubClient, repo: str, limit: int = 1000) -> dic
     for pr in client.paginate(f"/repos/{repo}/pulls", {"state": "closed"}, max_items=limit):
         if not pr.get("merged_at"):
             continue
-        for n in closing_references(f"{pr.get('title', '')}\n{pr.get('body') or ''}"):
+        for n in closing_references(f"{pr.get('title', '')}\n{pr.get('body') or ''}", repo):
             out.setdefault(n, []).append(pr["number"])
     return out
 
@@ -232,9 +254,13 @@ def fetch_one_issue(client: GitHubClient, repo: str, number: int) -> Thread | No
     for ev in client.paginate(f"/repos/{repo}/issues/{number}/timeline", max_items=200):
         src = (ev.get("source") or {}).get("issue") or {}
         pr = src.get("pull_request") or {}
-        if ev.get("event") == "cross-referenced" and pr.get("merged_at"):
-            if number in closing_references(f"{src.get('title', '')}\n{src.get('body') or ''}"):
-                merged.append(src["number"])
+        if ev.get("event") != "cross-referenced" or not pr.get("merged_at"):
+            continue
+        if (repo_of_url(src.get("html_url", "")) or repo).lower() != repo.lower():
+            continue  # a pull request in a fork or another repository
+        text = f"{src.get('title', '')}\n{src.get('body') or ''}"
+        if number in closing_references(text, repo):
+            merged.append(src["number"])
     return build_issue_thread(issue, comments, merged)
 
 

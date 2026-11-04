@@ -324,3 +324,23 @@ def test_graphql_refusal_is_a_warning_but_rate_limits_and_bad_credentials_are_ra
 
         with pytest.raises(type(exc)):
             fetch_discussions(_discussion_client(True, boom), "o/r")
+
+
+def test_references_to_other_repositories_are_not_mistaken_for_this_one():
+    assert closing_references("fixes psf/requests#12", "acme/demo") == []
+    assert closing_references("fixes ACME/Demo#12", "acme/demo") == [12]
+    assert closing_references("Fixes #12 and closes other/repo#9", "acme/demo") == [12]
+    assert duplicate_target("Duplicate of other/repo#5", "acme/demo") is None
+    assert duplicate_target("duplicate of other/repo#5. Duplicate of #6", "acme/demo") == 6
+
+
+def test_full_issue_urls_are_recognised():
+    url = "Closes https://github.com/acme/demo/issues/12"
+    assert closing_references(url, "acme/demo") == [12]
+    assert closing_references(url, "acme/other") == []
+    assert duplicate_target("Duplicate of https://github.com/acme/demo/issues/3", "acme/demo") == 3
+
+
+def test_prose_that_mentions_a_number_is_not_a_closing_reference():
+    for text in ("fix: handle #12 edge case", "prefix #12", "see #12", "unresolved #12"):
+        assert closing_references(text) == [], text
