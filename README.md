@@ -77,8 +77,6 @@ Requests are throttled to GitHub's documented limits, honour `Retry-After`, and 
 - **Issues:** about as good as GitHub's own search at finding the right issue, and it adds what search does not: discussions, the closing pull request, and whether the problem was fixed, answered or closed as a duplicate.
 - **Wording matters:** by default it matches words, so it works best when your question uses the project's own terms. For casual or paraphrased questions, pass `embeddings=` so it also matches meaning.
 
-Results come from small tests, so treat them as a guide. Details and method: [docs/EVALUATION.md](https://github.com/daivikawasthi01/langchain-github/blob/main/docs/EVALUATION.md).
-
 ## Limits
 
 - Read-only. Private repositories need a token that can read them.
@@ -93,4 +91,5 @@ pip install -e '.[dev]' && pytest              # offline tests
 GITHUB_LIVE=1 GITHUB_TOKEN=... pytest -m live  # live tests
 ```
 
-MIT licensed. Issues and pull requests welcome at [github.com/daivikawasthi01/langchain-github](https://github.com/daivikawasthi01/langchain-github).
+MIT licensed. 
+Issues and pull requests welcome at [github.com/daivikawasthi01/langchain-github](https://github.com/daivikawasthi01/langchain-github).
