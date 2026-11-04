@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import threading
 import time
 import warnings
@@ -32,6 +33,7 @@ from ._threads import (
     Thread,
     count_threads,
     fetch_all_issues,
+    fetch_changed_issues,
     fetch_discussions,
     fetch_threads,
     probe,
@@ -229,9 +231,9 @@ class GitHubIssuesRetriever(BaseRetriever):
     Two strategies, chosen by ``mode``:
 
     * ``"index"``: for repositories with at most ``max_index_threads`` issues. All issues,
-      comments, closing PRs and discussions are fetched with repo-wide listings (a handful of
-      requests per hundred threads) and ranked locally. A free ETag check per query re-fetches
-      only when something changed.
+      comments, closing PRs and discussions are fetched in bulk (a few requests per hundred
+      threads when signed in) and ranked locally. Each query makes one cheap check for changes
+      and fetches only the issues that changed since, embedding only their new text.
     * ``"search"``: for large repositories. GitHub's search (hybrid plus keyword variants)
       proposes up to ``max_candidates`` threads, which are fetched in full. Their *order* stays
       GitHub's (re-ranking did not beat it in our eval); what you gain is the best passage in
@@ -254,14 +256,19 @@ class GitHubIssuesRetriever(BaseRetriever):
     """Fuse GitHub's own hybrid search order into the ranking (one extra search call per query)."""
     embeddings: Embeddings | None = None
     max_age: float = 3600.0
-    """Seconds after which the index is refreshed even if the probe sees no change."""
+    """Seconds after which discussions (which the change check cannot see) are re-checked."""
+    rebuild_after: float = 86400.0
+    """Seconds after which the whole index is rebuilt, which also drops deleted issues."""
     base_url: str = DEFAULT_BASE_URL
 
     _client: GitHubClient | None = PrivateAttr(default=None)
     _index: ThreadIndex | None = PrivateAttr(default=None)
     _mode: str | None = PrivateAttr(default=None)
     _stamp: str = PrivateAttr(default="")
-    _built_at: float = PrivateAttr(default=0.0)
+    _checked_at: float = PrivateAttr(default=0.0)
+    _full_at: float = PrivateAttr(default=0.0)
+    _threads: dict[tuple[str, int], Thread] = PrivateAttr(default_factory=dict)
+    _vector_cache: dict[str, list[float]] = PrivateAttr(default_factory=dict)
     _lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
 
     @field_validator("repo")
@@ -289,18 +296,43 @@ class GitHubIssuesRetriever(BaseRetriever):
                 self._mode = "index" if n <= self.max_index_threads else "search"
         return self._mode
 
+    def _vectors(self, texts: list[str]) -> list[list[float]]:
+        """Embed texts, reusing the vector of any text seen before."""
+        assert self.embeddings is not None
+        keys = [hashlib.sha1(t.encode()).hexdigest() for t in texts]
+        todo = [i for i, key in enumerate(keys) if key not in self._vector_cache]
+        if todo:
+            fresh = embed_all_with(self.embeddings, [texts[i] for i in todo])
+            for i, vec in zip(todo, fresh, strict=True):
+                self._vector_cache[keys[i]] = vec
+        return [self._vector_cache[key] for key in keys]
+
     def _build(self, threads: list[Thread]) -> ThreadIndex:
         docs = [d for t in threads for d in thread_documents(t, self.repo)]
         vectors = None
         if self.embeddings is not None and docs:
-            vectors = embed_all_with(self.embeddings, [issue_embed_text(d) for d in docs])
+            vectors = self._vectors([issue_embed_text(d) for d in docs])
         return ThreadIndex(docs, vectors)
 
     def _refresh_index(self) -> None:
+        """Keep the index current at the lowest cost.
+
+        One request asks whether anything changed. If so, only the changed issues are fetched and
+        only their new text is embedded. Everything is rebuilt after ``rebuild_after`` seconds, or
+        when too many issues changed for a patch to be cheaper.
+        """
         stamp = probe(self.client, self.repo)
-        fresh = time.monotonic() - self._built_at < self.max_age
-        if self._index is not None and stamp == self._stamp and fresh:
-            return
+        now = time.monotonic()
+        if self._index is not None:
+            due = now - self._checked_at >= self.max_age
+            if stamp == self._stamp and not due:
+                return
+            if now - self._full_at < self.rebuild_after and self._patch(stamp):
+                self._stamp, self._checked_at = stamp, now
+                return
+        self._rebuild(stamp, now)
+
+    def _rebuild(self, stamp: str, now: float) -> None:
         threads = fetch_all_issues(self.client, self.repo, max_threads=self.max_index_threads)
         if self.include_discussions:
             threads.extend(fetch_discussions(self.client, self.repo))
@@ -310,8 +342,30 @@ class GitHubIssuesRetriever(BaseRetriever):
                 "for this repository).",
                 stacklevel=3,
             )
+        self._threads = {(t.kind, t.number): t for t in threads}
         self._index = self._build(threads)
-        self._stamp, self._built_at = stamp, time.monotonic()
+        self._stamp, self._checked_at, self._full_at = stamp, now, now
+
+    def _patch(self, stamp: str) -> bool:
+        """Apply changes since the last check. ``False`` means a full rebuild is needed."""
+        changed: list[Thread] = []
+        if stamp != self._stamp:
+            if not self._stamp:
+                return False
+            issues = fetch_changed_issues(self.client, self.repo, self._stamp)
+            if issues is None:
+                return False
+            changed.extend(issues)
+        if self.include_discussions and self.client.core.authenticated:
+            since = max(
+                (t.updated_at for t in self._threads.values() if t.kind == "discussion"), default=""
+            )
+            changed.extend(fetch_discussions(self.client, self.repo, since=since or None))
+        if changed:
+            for t in changed:
+                self._threads[(t.kind, t.number)] = t
+            self._index = self._build(list(self._threads.values()))
+        return True
 
     def _search_mode(self, query: str, k: int) -> list[Document]:
         numbers = search_candidates(self.client, self.repo, search_variants(query))
@@ -324,7 +378,7 @@ class GitHubIssuesRetriever(BaseRetriever):
         vectors = None
         qvec = None
         if self.embeddings is not None:
-            vectors = embed_all_with(self.embeddings, [issue_embed_text(d) for d in docs])
+            vectors = self._vectors([issue_embed_text(d) for d in docs])
             qvec = self.embeddings.embed_query(query)
         return ThreadIndex(docs, vectors).search(normalize(query), k, qvec, prior, prior_only=True)
 

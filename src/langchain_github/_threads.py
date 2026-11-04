@@ -36,7 +36,7 @@ def _same_repo(match: re.Match[str], repo: str | None) -> bool:
 _DISCUSSIONS_QUERY = """
 query($owner: String!, $name: String!, $after: String) {
   repository(owner: $owner, name: $name) {
-    discussions(first: 50, after: $after) {
+    discussions(first: 50, after: $after, orderBy: {field: UPDATED_AT, direction: DESC}) {
       pageInfo { hasNextPage endCursor }
       nodes {
         number title body url closed updatedAt
@@ -175,10 +175,11 @@ _ISSUE_FIELDS = """
 
 _ISSUES_QUERY = (
     """
-query($owner: String!, $name: String!, $after: String, $states: [IssueState!]) {
+query($owner: String!, $name: String!, $after: String, $states: [IssueState!],
+      $since: DateTime, $order: IssueOrder!) {
   repository(owner: $owner, name: $name) {
-    issues(first: 50, after: $after, states: $states,
-           orderBy: {field: CREATED_AT, direction: DESC}) {
+    issues(first: 50, after: $after, states: $states, filterBy: {since: $since},
+           orderBy: $order) {
       pageInfo { hasNextPage endCursor }
       nodes {"""
     + _ISSUE_FIELDS
@@ -253,14 +254,26 @@ def _use_graphql(client: GitHubClient) -> bool:
     return client.core.authenticated and client.core.graphql_issues
 
 
-def _issues_graphql(client: GitHubClient, repo: str, max_threads: int, state: str) -> list[Thread]:
+def _issues_graphql(
+    client: GitHubClient, repo: str, max_threads: int, state: str, since: str | None = None
+) -> list[Thread]:
+    """Issues newest-created first, or (with ``since``) those updated since then."""
     owner, name = repo.split("/", 1)
     states = None if state == "all" else [state.upper()]
+    order = {"field": "UPDATED_AT" if since else "CREATED_AT", "direction": "DESC"}
     out: list[Thread] = []
     after: str | None = None
     while len(out) < max_threads:
         data = client.graphql(
-            _ISSUES_QUERY, {"owner": owner, "name": name, "after": after, "states": states}
+            _ISSUES_QUERY,
+            {
+                "owner": owner,
+                "name": name,
+                "after": after,
+                "states": states,
+                "since": since,
+                "order": order,
+            },
         )
         page = data["repository"]["issues"]
         out.extend(thread_from_graphql(client, repo, n) for n in page["nodes"])
@@ -298,6 +311,31 @@ def fetch_threads(client: GitHubClient, repo: str, numbers: list[int]) -> list[T
         if thread is not None:
             out.append(thread)
     return out
+
+
+MAX_INCREMENTAL = 30  # more changed issues than this over REST is cheaper to rebuild in full
+
+
+def fetch_changed_issues(client: GitHubClient, repo: str, since: str) -> list[Thread] | None:
+    """Issues created or updated since ``since`` (an ``updated_at`` stamp), with everything the
+    index needs. ``None`` means too many changed: rebuild instead."""
+    if _use_graphql(client):
+        try:
+            limit = 10 * MAX_INCREMENTAL
+            changed = _issues_graphql(client, repo, limit, "all", since)
+        except GitHubGraphQLError:
+            client.core.graphql_issues = False
+        else:
+            return None if len(changed) >= limit else changed
+    listing = client.paginate(
+        f"/repos/{repo}/issues",
+        {"state": "all", "since": since, "sort": "updated", "direction": "desc"},
+        max_items=3 * MAX_INCREMENTAL,
+    )
+    numbers = [i["number"] for i in listing if "pull_request" not in i]
+    if len(numbers) > MAX_INCREMENTAL:
+        return None
+    return fetch_threads(client, repo, numbers)
 
 
 def probe(client: GitHubClient, repo: str) -> str:
@@ -370,12 +408,15 @@ def fetch_all_issues(
     ]
 
 
-def fetch_discussions(client: GitHubClient, repo: str, limit: int = 500) -> list[Thread]:
+def fetch_discussions(
+    client: GitHubClient, repo: str, limit: int = 500, since: str | None = None
+) -> list[Thread]:
     """All discussions, or none (with a warning) if they cannot be read.
 
     GitHub serves discussions only through GraphQL, which needs a signed-in user. Rate-limit and
     credential errors are raised; only GraphQL-level refusals (such as discussions being switched
-    off for the repository) are turned into a warning.
+    off for the repository) are turned into a warning. With ``since``, only discussions updated
+    at or after that stamp are returned.
     """
     if not client.core.authenticated:
         warnings.warn(
@@ -393,7 +434,14 @@ def fetch_discussions(client: GitHubClient, repo: str, limit: int = 500) -> list
                 _DISCUSSIONS_QUERY, {"owner": owner, "name": name, "after": after}
             )
             page = data["repository"]["discussions"]
-            out.extend(build_discussion_thread(n) for n in page["nodes"])
+            nodes = page["nodes"]
+            if since:  # newest-updated first, so stop at the first one that is older
+                fresh = [n for n in nodes if n.get("updatedAt", "") >= since]
+                out.extend(build_discussion_thread(n) for n in fresh)
+                if len(fresh) < len(nodes):
+                    break
+            else:
+                out.extend(build_discussion_thread(n) for n in nodes)
             if not page["pageInfo"]["hasNextPage"]:
                 break
             after = page["pageInfo"]["endCursor"]

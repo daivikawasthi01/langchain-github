@@ -76,6 +76,7 @@ class FakeIssues:
         ]
         self.graphql_failures: list[str] = []  # GraphQL messages to refuse, one per request
         self.fork_pr = False  # also report a merged PR from another repository as closing #2
+        self.since_log: list[str] = []  # the `since` of every incremental issue listing
         self.search_hits: list[int] = []
         self.calls: list[str] = []
         self.etag_hits = 0
@@ -151,6 +152,9 @@ class FakeIssues:
             self.calls.append("graphql:issues")
             variables = json.loads(req.content)["variables"]
             nodes = [self._gql_issue(i) for i in real]
+            if variables.get("since"):
+                self.since_log.append(variables["since"])
+                nodes = [n for n in nodes if n["updatedAt"] >= variables["since"]]
             if variables.get("states"):
                 nodes = [n for n in nodes if n["state"] in variables["states"]]
             page = {"pageInfo": {"hasNextPage": False, "endCursor": None}, "nodes": nodes}
@@ -192,6 +196,11 @@ class FakeIssues:
                     200, json=[{"updated_at": self.updated}], headers={"etag": tag}
                 )
             if path == f"/repos/{REPO}/issues":
+                if params.get("since"):
+                    self.since_log.append(params["since"])
+                    return httpx.Response(
+                        200, json=[i for i in self.issues if i["updated_at"] >= params["since"]]
+                    )
                 return httpx.Response(200, json=self.issues)
             if path == f"/repos/{REPO}/issues/comments":
                 return httpx.Response(200, json=self.comments)
