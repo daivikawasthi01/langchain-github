@@ -9,7 +9,7 @@ LangChain retrievers and loaders for GitHub repositories, issues and discussions
 ## Installation
 
 ```bash
-pip install -U langchain-github
+pip install langchain-github
 ```
 
 No token is needed to try it, but without signing in GitHub allows only 60 requests an hour. To sign in once, install the [GitHub CLI](https://cli.github.com) and run:
