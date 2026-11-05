@@ -10,7 +10,7 @@ from ._client import (
 from .loaders import GitHubIssuesLoader, GitHubRepositoryLoader, RepoSnapshot
 from .retrievers import GitHubIssuesRetriever, GitHubRepoRetriever
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "AsyncGitHubClient",
